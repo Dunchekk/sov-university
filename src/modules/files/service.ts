@@ -15,7 +15,7 @@ const inputSchema = z.object({
   resourceId: z.string().min(1).max(150),
 });
 export const storageRoot = () =>
-  resolve(process.env.STORAGE_DIR ?? ".data/files");
+  resolve(/* turbopackIgnore: true */ process.env.STORAGE_DIR ?? ".data/files");
 export function validatePdf(name: string, mime: string, data: Buffer) {
   invariant(
     /\.pdf$/i.test(name) &&
@@ -48,7 +48,10 @@ export async function uploadFile(request: Request, student: StudentContext) {
   validatePdf(file.name, file.type, data);
   const key = randomUUID();
   await mkdir(storageRoot(), { recursive: true });
-  await writeFile(join(storageRoot(), key), data, { flag: "wx", mode: 0o600 });
+  await writeFile(join(/* turbopackIgnore: true */ storageRoot(), key), data, {
+    flag: "wx",
+    mode: 0o600,
+  });
   try {
     return await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`files:${student.id}`},0))`;
@@ -119,7 +122,9 @@ export async function uploadFile(request: Request, student: StudentContext) {
       });
     });
   } catch (error) {
-    await unlink(join(storageRoot(), key)).catch(() => {});
+    await unlink(join(/* turbopackIgnore: true */ storageRoot(), key)).catch(
+      () => {},
+    );
     throw error;
   }
 }
@@ -155,7 +160,12 @@ export async function downloadFile(student: StudentContext, id: string) {
   );
   let data: Buffer;
   try {
-    data = await readFile(join(storageRoot(), file.storageKey));
+    data = await readFile(
+      /* turbopackIgnore: true */ join(
+        /* turbopackIgnore: true */ storageRoot(),
+        file.storageKey,
+      ),
+    );
   } catch {
     throw notFound();
   }

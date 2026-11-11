@@ -46,7 +46,7 @@
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "@types/pg": "8.15.6",
-    "eslint": "10.14.0",
+    "eslint": "9.39.5",
     "eslint-config-next": "16.4.6",
     "vitest": "5.1.0",
     "@playwright/test": "1.65.0",

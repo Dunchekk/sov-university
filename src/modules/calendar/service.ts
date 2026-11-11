@@ -55,7 +55,7 @@ export function parseCalendarQuery(params: URLSearchParams): CalendarQuery {
   };
 }
 export async function calendarEvents(
-  student: StudentContext,
+  student: Pick<StudentContext, "id" | "groupId">,
   raw: CalendarQuery,
   options: { includeDeleted?: boolean } = {},
 ): Promise<CalendarEvent[]> {
@@ -149,7 +149,10 @@ export async function calendarEvents(
     q.types.includes("PERSONAL") && !q.course
       ? db.importedEvent.findMany({
           where: {
-            source: { studentId: student.id },
+            source: {
+              studentId: student.id,
+              ...(options.includeDeleted ? {} : { deletedAt: null }),
+            },
             OR: [
               { startsAt: { lt: to }, endsAt: { gt: from } },
               { startDate: { lt: q.to }, endDate: { gt: q.from } },
@@ -218,6 +221,7 @@ export async function calendarEvents(
       type: "EXAM",
       title: r.title,
       description: `${r.reason} ${r.consultation}`,
+      exportDescription: r.consultation,
       startsAt: r.startsAt.toISOString(),
       endsAt: r.endsAt.toISOString(),
       location: r.location,

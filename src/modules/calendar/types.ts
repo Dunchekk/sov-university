@@ -19,6 +19,7 @@ export type CalendarEvent = {
   type: EventType;
   title: string;
   description: string;
+  exportDescription?: string;
   startsAt: string | null;
   endsAt: string | null;
   startDate: string | null;
