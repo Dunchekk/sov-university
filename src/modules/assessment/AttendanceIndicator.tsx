@@ -1,8 +1,78 @@
-'use client';
-import {useState} from 'react';
-import {Info} from 'lucide-react';
-import {Button,ui} from '@/shared/ui/primitives';
-import {Dialog} from '@/shared/ui/Dialog';
-import type {attendanceStats,Scheme} from './domain';
-export function attendanceExplanation(a:ReturnType<typeof attendanceStats>,scheme:Scheme){if(!a.total)return 'Учтённых занятий пока нет. Будущие и отменённые занятия не считаются пропусками.';let text=`Сейчас ${Math.round(a.percentage!)}%: ${a.present} из ${a.total} учтённых занятий. `;text+=scheme.attendancePenalty?`При посещаемости ниже ${scheme.attendanceThreshold}% итоговая оценка уменьшается на ${scheme.attendancePenalty} балл по десятибалльной шкале. В течение семестра это предварительный риск. `:'Посещаемость отображается для информации и не меняет оценку. ';if(scheme.attendanceThreshold&&a.meets===false)text+=a.needed===null?'Достичь 100% новыми посещениями после пропуска невозможно. ':`Чтобы достичь ${scheme.attendanceThreshold}%, нужно посетить ещё ${a.needed} занятий подряд; по расписанию осталось ${a.remaining}. ${a.reachable?'':'Оставшихся занятий недостаточно — обсудите ситуацию с преподавателем.'} `;if(a.unrecorded)text+=`Данные неполные: не учтено ${a.unrecorded} занятий. `;return text;}
-export function AttendanceIndicator({attendance,scheme}:{attendance:ReturnType<typeof attendanceStats>;scheme:Scheme}){const [open,setOpen]=useState(false);const text=attendanceExplanation(attendance,scheme);return <><span className={ui.row}><span>{attendance.percentage===null?'Нет данных':`${Math.round(attendance.percentage)}%`}</span><Button small aria-label="Как посещаемость влияет на результат" title={text} onClick={()=>setOpen(true)} onFocus={e=>e.currentTarget.setAttribute('aria-description',text)}><Info size={14}/>{scheme.attendancePenalty>0&&<span className={attendance.meets===false?ui.warning:ui.muted}>Влияет на оценку</span>}</Button></span><Dialog open={open} onClose={()=>setOpen(false)} title="Посещаемость и результат"><p>{text}</p><p className={ui.caption}>Уважительные отсутствия {scheme.excludeExcused?'исключены из знаменателя':'учтены по правилам курса'}. Неучтённые, отменённые и будущие занятия не считаются пропусками.</p></Dialog></>}
+"use client";
+import { useState } from "react";
+import { Info } from "lucide-react";
+import { Button, ui } from "@/shared/ui/primitives";
+import { Dialog } from "@/shared/ui/Dialog";
+import type { attendanceStats, Scheme } from "./domain";
+export function attendanceExplanation(
+  a: ReturnType<typeof attendanceStats>,
+  scheme: Scheme,
+) {
+  if (!a.total)
+    return "Учтённых занятий пока нет. Будущие и отменённые занятия не считаются пропусками.";
+  let text = `Сейчас ${Math.round(a.percentage!)}%: ${a.present} из ${a.total} учтённых занятий. `;
+  text += scheme.attendancePenalty
+    ? `При посещаемости ниже ${scheme.attendanceThreshold}% итоговая оценка уменьшается на ${scheme.attendancePenalty} балл по десятибалльной шкале. В течение семестра это предварительный риск. `
+    : "Посещаемость отображается для информации и не меняет оценку. ";
+  if (scheme.attendanceThreshold && a.meets === false)
+    text +=
+      a.needed === null
+        ? "Достичь 100% новыми посещениями после пропуска невозможно. "
+        : `Чтобы достичь ${scheme.attendanceThreshold}%, нужно посетить ещё ${a.needed} занятий подряд; по расписанию осталось ${a.remaining}. ${a.reachable ? "" : "Оставшихся занятий недостаточно — обсудите ситуацию с преподавателем."} `;
+  if (a.unrecorded)
+    text += `Данные неполные: не учтено ${a.unrecorded} занятий. `;
+  return text;
+}
+export function AttendanceIndicator({
+  attendance,
+  scheme,
+}: {
+  attendance: ReturnType<typeof attendanceStats>;
+  scheme: Scheme;
+}) {
+  const [open, setOpen] = useState(false);
+  const text = attendanceExplanation(attendance, scheme);
+  return (
+    <>
+      <span className={ui.row}>
+        <span>
+          {attendance.percentage === null
+            ? "Нет данных"
+            : `${Math.round(attendance.percentage)}%`}
+        </span>
+        <Button
+          small
+          aria-label="Как посещаемость влияет на результат"
+          title={text}
+          onClick={() => setOpen(true)}
+          onFocus={(e) =>
+            e.currentTarget.setAttribute("aria-description", text)
+          }
+        >
+          <Info size={14} />
+          {scheme.attendancePenalty > 0 && (
+            <span
+              className={attendance.meets === false ? ui.warning : ui.muted}
+            >
+              Влияет на оценку
+            </span>
+          )}
+        </Button>
+      </span>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Посещаемость и результат"
+      >
+        <p>{text}</p>
+        <p className={ui.caption}>
+          Уважительные отсутствия{" "}
+          {scheme.excludeExcused
+            ? "исключены из знаменателя"
+            : "учтены по правилам курса"}
+          . Неучтённые, отменённые и будущие занятия не считаются пропусками.
+        </p>
+      </Dialog>
+    </>
+  );
+}

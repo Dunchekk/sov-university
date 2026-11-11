@@ -1,5 +1,111 @@
-import {db} from '../src/server/db';
-import {addDays,atTime} from '../src/shared/lib/time';
-import type {Prisma} from '../src/generated/prisma/client';
-export async function academicExtras(){if(await db.seedRun.findUnique({where:{id:'v2-exams'}}))return;const initial=await db.seedRun.findUniqueOrThrow({where:{id:'v1'}});const day=(n:number,t='10:00')=>atTime(addDays(initial.baseDate,n),t);const enrollments=await db.enrollment.findMany({where:{status:'CURRENT'},include:{student:true,course:true}});for(let i=0;i<enrollments.length;i++){const e=enrollments[i];await db.lesson.upsert({where:{id:`exam-${e.id}`},update:{},create:{id:`exam-${e.id}`,courseId:e.courseId,groupId:e.student.groupId,lecturerId:e.course.lecturerId,roomId:'room-1',title:`${e.course.assessmentType}: ${e.course.name}`,kind:'Экзамен',startsAt:day(20+i),endsAt:day(20+i,'12:00')}});}
-const reference=await db.course.findUniqueOrThrow({where:{id:'course-6'}});await db.course.upsert({where:{id:'course-debt'},update:{},create:{id:'course-debt',name:'Основы дискретной математики',code:'DP-119',semester:2,description:'Базовые понятия логики, множеств и графов.',assessmentType:'Экзамен',lecturerId:'lecturer-2',scheme:reference.scheme as Prisma.InputJsonValue}});await db.enrollment.upsert({where:{id:'enroll-debt-a'},update:{},create:{id:'enroll-debt-a',studentId:'student-a',courseId:'course-debt',status:'DEBT',officialGrade:'3',officialSchemeVersion:1,officialAdjustment:0,publishedAt:day(-90)}});await db.assessment.upsert({where:{id:'assessment-debt'},update:{},create:{id:'assessment-debt',courseId:'course-debt',title:'Экзаменационная работа',maxPoints:100,mandatory:true,dueAt:day(-90),instruction:'Требуется пересдача. Подготовьте решение по темам консультации.'}});await db.result.upsert({where:{enrollmentId_assessmentId:{enrollmentId:'enroll-debt-a',assessmentId:'assessment-debt'}},update:{},create:{enrollmentId:'enroll-debt-a',assessmentId:'assessment-debt',courseId:'course-debt',points:35,status:'PUBLISHED',publishedAt:day(-89)}});await db.retake.upsert({where:{id:'retake-a'},update:{},create:{id:'retake-a',enrollmentId:'enroll-debt-a',title:'Пересдача: основы дискретной математики',startsAt:day(12,'14:00'),endsAt:day(12,'16:00'),location:'Корпус А, аудитория 405',reason:'Не достигнут порог положительной оценки.',consultation:'Консультация с Еленой Беловой: среда 16:00, кафедра информационных систем. За порядком допуска обратитесь в учебный офис.'}});await db.seedRun.create({data:{id:'v2-exams',baseDate:initial.baseDate}});}
+import { db } from "../src/server/db";
+import { addDays, atTime } from "../src/shared/lib/time";
+import type { Prisma } from "../src/generated/prisma/client";
+export async function academicExtras() {
+  if (await db.seedRun.findUnique({ where: { id: "v2-exams" } })) return;
+  const initial = await db.seedRun.findUniqueOrThrow({ where: { id: "v1" } });
+  const day = (n: number, t = "10:00") =>
+    atTime(addDays(initial.baseDate, n), t);
+  const enrollments = await db.enrollment.findMany({
+    where: { status: "CURRENT" },
+    include: { student: true, course: true },
+  });
+  for (let i = 0; i < enrollments.length; i++) {
+    const e = enrollments[i];
+    await db.lesson.upsert({
+      where: { id: `exam-${e.id}` },
+      update: {},
+      create: {
+        id: `exam-${e.id}`,
+        courseId: e.courseId,
+        groupId: e.student.groupId,
+        lecturerId: e.course.lecturerId,
+        roomId: "room-1",
+        title: `${e.course.assessmentType}: ${e.course.name}`,
+        kind: "Экзамен",
+        startsAt: day(20 + i),
+        endsAt: day(20 + i, "12:00"),
+      },
+    });
+  }
+  const reference = await db.course.findUniqueOrThrow({
+    where: { id: "course-6" },
+  });
+  await db.course.upsert({
+    where: { id: "course-debt" },
+    update: {},
+    create: {
+      id: "course-debt",
+      name: "Основы дискретной математики",
+      code: "DP-119",
+      semester: 2,
+      description: "Базовые понятия логики, множеств и графов.",
+      assessmentType: "Экзамен",
+      lecturerId: "lecturer-2",
+      scheme: reference.scheme as Prisma.InputJsonValue,
+    },
+  });
+  await db.enrollment.upsert({
+    where: { id: "enroll-debt-a" },
+    update: {},
+    create: {
+      id: "enroll-debt-a",
+      studentId: "student-a",
+      courseId: "course-debt",
+      status: "DEBT",
+      officialGrade: "3",
+      officialSchemeVersion: 1,
+      officialAdjustment: 0,
+      publishedAt: day(-90),
+    },
+  });
+  await db.assessment.upsert({
+    where: { id: "assessment-debt" },
+    update: {},
+    create: {
+      id: "assessment-debt",
+      courseId: "course-debt",
+      title: "Экзаменационная работа",
+      maxPoints: 100,
+      mandatory: true,
+      dueAt: day(-90),
+      instruction:
+        "Требуется пересдача. Подготовьте решение по темам консультации.",
+    },
+  });
+  await db.result.upsert({
+    where: {
+      enrollmentId_assessmentId: {
+        enrollmentId: "enroll-debt-a",
+        assessmentId: "assessment-debt",
+      },
+    },
+    update: {},
+    create: {
+      enrollmentId: "enroll-debt-a",
+      assessmentId: "assessment-debt",
+      courseId: "course-debt",
+      points: 35,
+      status: "PUBLISHED",
+      publishedAt: day(-89),
+    },
+  });
+  await db.retake.upsert({
+    where: { id: "retake-a" },
+    update: {},
+    create: {
+      id: "retake-a",
+      enrollmentId: "enroll-debt-a",
+      title: "Пересдача: основы дискретной математики",
+      startsAt: day(12, "14:00"),
+      endsAt: day(12, "16:00"),
+      location: "Корпус А, аудитория 405",
+      reason: "Не достигнут порог положительной оценки.",
+      consultation:
+        "Консультация с Еленой Беловой: среда 16:00, кафедра информационных систем. За порядком допуска обратитесь в учебный офис.",
+    },
+  });
+  await db.seedRun.create({
+    data: { id: "v2-exams", baseDate: initial.baseDate },
+  });
+}

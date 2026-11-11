@@ -1,9 +1,154 @@
-import Link from 'next/link';
-import {db} from '@/server/db';
-import {formatDate,formatTime} from '@/shared/lib/time';
-import {pageStudent} from '@/server/access';
-import {myCourses} from '@/modules/courses/service';
-import {GradeBreakdown} from '@/modules/assessment/GradeBreakdown';
-import {AttendanceIndicator} from '@/modules/assessment/AttendanceIndicator';
-import {PageTitle,Tabs,Badge,Empty,ui} from '@/shared/ui/primitives';
-export default async function ResultsPage({searchParams}:{searchParams:Promise<{status?:string;course?:string;semester?:string;type?:string}>}){const student=await pageStudent();const p=await searchParams;const all=await myCourses(student);const retakes=await db.retake.findMany({where:{enrollment:{studentId:student.id}},orderBy:{startsAt:'asc'}});const results=all.filter(r=>(!p.course||r.enrollment.courseId===p.course)&&(!p.semester||String(r.enrollment.course.semester)===p.semester)&&(!p.type||r.enrollment.course.assessmentType===p.type)&&(p.status==='completed'?r.enrollment.status==='COMPLETED':p.status==='attention'?r.enrollment.status!=='COMPLETED'&&(!r.grade.admitted||r.attendance.meets===false):true));return <><PageTitle title="Оценки и посещаемость" description="Не просто цифры. Понятные правила и твой следующий шаг."/><Tabs active={p.status??'all'} items={[['all','Все результаты'],['attention','Требует внимания'],['completed','Завершено']].map(([id,label])=>({id,label,href:`/studies/results?status=${id}`}))}/><form className={ui.row}><input type="hidden" name="status" value={p.status??'all'}/><label>Дисциплина<select name="course" defaultValue={p.course??''}><option value="">Все дисциплины</option>{all.map(r=><option key={r.enrollment.courseId} value={r.enrollment.courseId}>{r.enrollment.course.name}</option>)}</select></label><label>Семестр<select name="semester" defaultValue={p.semester??''}><option value="">Все</option><option value="2">2 семестр</option><option value="3">3 семестр</option></select></label><label>Аттестация<select name="type" defaultValue={p.type??''}><option value="">Все</option><option>Экзамен</option><option>Зачёт</option></select></label><button className={ui.button}>Показать</button></form><div className={ui.stack}>{retakes.length>0&&<section className={ui.card}><h2>Задолженности и пересдачи</h2>{retakes.map(r=><div key={r.id} className={ui.listItem}><h3>{r.title}</h3><p>{r.reason}</p><p>{formatDate(r.startsAt)} · {formatTime(r.startsAt)} · {r.location}</p><p className={ui.caption}>{r.consultation}</p></div>)}</section>}{results.map(r=><details key={r.enrollment.id} className={ui.card} open={p.course===r.enrollment.courseId}><summary><span className={ui.between}><span><strong>{r.enrollment.course.name}</strong><span className={ui.caption}> · {r.enrollment.course.assessmentType}</span></span><span className={ui.row}><strong>{r.grade.points} / {r.grade.maximum} баллов</strong><Badge tone={r.grade.admitted?'success':'warning'}>{r.enrollment.officialGrade?`Итог ${r.enrollment.officialGrade}/10`:r.grade.admitted?'Допущен':'Есть условия'}</Badge></span></span></summary><div className={ui.stack}><div className={ui.between}><Link className={ui.link} href={`/studies/courses/${r.enrollment.courseId}`}>Открыть дисциплину →</Link><AttendanceIndicator attendance={r.attendance} scheme={r.scheme}/></div><GradeBreakdown result={r}/></div></details>)}{!results.length&&<Empty title="Результатов по фильтру нет"/>}</div></>}
+import Link from "next/link";
+import { db } from "@/server/db";
+import { formatDate, formatTime } from "@/shared/lib/time";
+import { pageStudent } from "@/server/access";
+import { myCourses } from "@/modules/courses/service";
+import { GradeBreakdown } from "@/modules/assessment/GradeBreakdown";
+import { AttendanceIndicator } from "@/modules/assessment/AttendanceIndicator";
+import { PageTitle, Tabs, Badge, Empty, ui } from "@/shared/ui/primitives";
+export default async function ResultsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    status?: string;
+    course?: string;
+    semester?: string;
+    type?: string;
+  }>;
+}) {
+  const student = await pageStudent();
+  const p = await searchParams;
+  const all = await myCourses(student);
+  const retakes = await db.retake.findMany({
+    where: { enrollment: { studentId: student.id } },
+    orderBy: { startsAt: "asc" },
+  });
+  const results = all.filter(
+    (r) =>
+      (!p.course || r.enrollment.courseId === p.course) &&
+      (!p.semester || String(r.enrollment.course.semester) === p.semester) &&
+      (!p.type || r.enrollment.course.assessmentType === p.type) &&
+      (p.status === "completed"
+        ? r.enrollment.status === "COMPLETED"
+        : p.status === "attention"
+          ? r.enrollment.status !== "COMPLETED" &&
+            (!r.grade.admitted || r.attendance.meets === false)
+          : true),
+  );
+  return (
+    <>
+      <PageTitle
+        title="Оценки и посещаемость"
+        description="Не просто цифры. Понятные правила и твой следующий шаг."
+      />
+      <Tabs
+        active={p.status ?? "all"}
+        items={[
+          ["all", "Все результаты"],
+          ["attention", "Требует внимания"],
+          ["completed", "Завершено"],
+        ].map(([id, label]) => ({
+          id,
+          label,
+          href: `/studies/results?status=${id}`,
+        }))}
+      />
+      <form className={ui.row}>
+        <input type="hidden" name="status" value={p.status ?? "all"} />
+        <label>
+          Дисциплина
+          <select name="course" defaultValue={p.course ?? ""}>
+            <option value="">Все дисциплины</option>
+            {all.map((r) => (
+              <option key={r.enrollment.courseId} value={r.enrollment.courseId}>
+                {r.enrollment.course.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Семестр
+          <select name="semester" defaultValue={p.semester ?? ""}>
+            <option value="">Все</option>
+            <option value="2">2 семестр</option>
+            <option value="3">3 семестр</option>
+          </select>
+        </label>
+        <label>
+          Аттестация
+          <select name="type" defaultValue={p.type ?? ""}>
+            <option value="">Все</option>
+            <option>Экзамен</option>
+            <option>Зачёт</option>
+          </select>
+        </label>
+        <button className={ui.button}>Показать</button>
+      </form>
+      <div className={ui.stack}>
+        {retakes.length > 0 && (
+          <section className={ui.card}>
+            <h2>Задолженности и пересдачи</h2>
+            {retakes.map((r) => (
+              <div key={r.id} className={ui.listItem}>
+                <h3>{r.title}</h3>
+                <p>{r.reason}</p>
+                <p>
+                  {formatDate(r.startsAt)} · {formatTime(r.startsAt)} ·{" "}
+                  {r.location}
+                </p>
+                <p className={ui.caption}>{r.consultation}</p>
+              </div>
+            ))}
+          </section>
+        )}
+        {results.map((r) => (
+          <details
+            key={r.enrollment.id}
+            className={ui.card}
+            open={p.course === r.enrollment.courseId}
+          >
+            <summary>
+              <span className={ui.between}>
+                <span>
+                  <strong>{r.enrollment.course.name}</strong>
+                  <span className={ui.caption}>
+                    {" "}
+                    · {r.enrollment.course.assessmentType}
+                  </span>
+                </span>
+                <span className={ui.row}>
+                  <strong>
+                    {r.grade.points} / {r.grade.maximum} баллов
+                  </strong>
+                  <Badge tone={r.grade.admitted ? "success" : "warning"}>
+                    {r.enrollment.officialGrade
+                      ? `Итог ${r.enrollment.officialGrade}/10`
+                      : r.grade.admitted
+                        ? "Допущен"
+                        : "Есть условия"}
+                  </Badge>
+                </span>
+              </span>
+            </summary>
+            <div className={ui.stack}>
+              <div className={ui.between}>
+                <Link
+                  className={ui.link}
+                  href={`/studies/courses/${r.enrollment.courseId}`}
+                >
+                  Открыть дисциплину →
+                </Link>
+                <AttendanceIndicator
+                  attendance={r.attendance}
+                  scheme={r.scheme}
+                />
+              </div>
+              <GradeBreakdown result={r} />
+            </div>
+          </details>
+        ))}
+        {!results.length && <Empty title="Результатов по фильтру нет" />}
+      </div>
+    </>
+  );
+}

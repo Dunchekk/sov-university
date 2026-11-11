@@ -12,3 +12,6 @@ src/generated/
 .DS_Store
 
 .local-audit.json
+
+.next-test/
+.next-production/
