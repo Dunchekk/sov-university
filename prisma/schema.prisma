@@ -1,0 +1,738 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  student       Student?
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+}
+
+model LoginAttempt {
+  key       String   @id
+  count     Int      @default(1)
+  expiresAt DateTime
+}
+
+model Program {
+  id         String           @id
+  name       String
+  faculty    String
+  credits    Int              @default(240)
+  groups     Group[]
+  curriculum CurriculumItem[]
+}
+
+model Group {
+  id        String         @id
+  name      String
+  programId String
+  program   Program        @relation(fields: [programId], references: [id])
+  year      Int
+  students  Student[]
+  roster    RosterPerson[]
+  lessons   Lesson[]
+}
+
+model Student {
+  id              String              @id
+  userId          String              @unique
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId         String
+  group           Group               @relation(fields: [groupId], references: [id])
+  funding         String
+  studyMode       String              @default("Очная")
+  currentSemester Int                 @default(3)
+  privateDetails  StudentPrivate?
+  preference      Preference?
+  enrollments     Enrollment[]
+  personalEvents  PersonalEvent[]
+  schedules       SavedSchedule[]
+  importSources   ImportSource[]
+  previews        ImportPreview[]
+  feeds           CalendarFeed[]
+  projects        StudentProject[]
+  achievements    Achievement[]
+  requests        StudentRequest[]
+  payments        Payment[]
+  contracts       Contract[]
+  awards          ScholarshipAward[]
+  savedEvents     SavedEvent[]
+  notifications   Notification[]
+  files           FileObject[]
+  orders          StudentOrder[]
+  idempotency     IdempotencyRecord[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+}
+
+model StudentPrivate {
+  studentId    String  @id
+  student      Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  contactEmail String
+  document     String
+  address      String
+}
+
+model Preference {
+  studentId        String   @id
+  student          Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  theme            String   @default("system")
+  calendarView     String   @default("week")
+  sidebarCollapsed Boolean  @default(false)
+  notifications    Json
+  updatedAt        DateTime @updatedAt
+}
+
+model Person {
+  id           String           @id
+  name         String
+  department   String
+  email        String
+  consultation String
+  courses      Course[]
+  lessons      Lesson[]
+  projects     StudentProject[]
+}
+
+model RosterPerson {
+  id      String @id
+  name    String
+  groupId String
+  group   Group  @relation(fields: [groupId], references: [id])
+}
+
+model Department {
+  id          String @id
+  name        String
+  description String
+  email       String
+  hours       String
+  location    String
+}
+
+model Room {
+  id         String   @id
+  name       String
+  building   String
+  address    String
+  directions String
+  lessons    Lesson[]
+}
+
+model Course {
+  id             String           @id
+  name           String
+  code           String           @unique
+  semester       Int
+  description    String
+  assessmentType String
+  lecturerId     String
+  lecturer       Person           @relation(fields: [lecturerId], references: [id])
+  scheme         Json
+  enrollments    Enrollment[]
+  lessons        Lesson[]
+  assessments    Assessment[]
+  files          FileObject[]
+  curriculum     CurriculumItem[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model Enrollment {
+  id                    String       @id
+  studentId             String
+  student               Student      @relation(fields: [studentId], references: [id])
+  courseId              String
+  course                Course       @relation(fields: [courseId], references: [id])
+  status                String       @default("CURRENT")
+  officialGrade         String?
+  officialSchemeVersion Int?
+  officialAdjustment    Int?
+  publishedAt           DateTime?
+  results               Result[]
+  attendance            Attendance[]
+
+  @@unique([studentId, courseId])
+  @@unique([id, courseId])
+}
+
+model Lesson {
+  id         String           @id
+  courseId   String
+  course     Course           @relation(fields: [courseId], references: [id])
+  groupId    String
+  group      Group            @relation(fields: [groupId], references: [id])
+  lecturerId String
+  lecturer   Person           @relation(fields: [lecturerId], references: [id])
+  roomId     String?
+  room       Room?            @relation(fields: [roomId], references: [id])
+  title      String
+  kind       String           @default("Лекция")
+  startsAt   DateTime
+  endsAt     DateTime
+  timezone   String           @default("Europe/Moscow")
+  onlineUrl  String?
+  cancelled  Boolean          @default(false)
+  sequence   Int              @default(0)
+  changes    ScheduleChange[]
+  attendance Attendance[]
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([id, courseId])
+  @@index([startsAt, endsAt])
+  @@index([groupId, startsAt])
+}
+
+model ScheduleChange {
+  id        String   @id @default(cuid())
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  kind      String
+  before    String
+  after     String
+  createdAt DateTime @default(now())
+}
+
+model Assessment {
+  id          String   @id
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id])
+  title       String
+  maxPoints   Int
+  mandatory   Boolean  @default(false)
+  dueAt       DateTime
+  instruction String
+  kind        String   @default("DEADLINE")
+  sequence    Int      @default(0)
+  results     Result[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([id, courseId])
+  @@index([dueAt])
+}
+
+model Result {
+  id           String     @id @default(cuid())
+  courseId     String
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId, courseId], references: [id, courseId])
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId, courseId], references: [id, courseId])
+  points       Int?
+  status       String
+  comment      String?
+  publishedAt  DateTime?
+
+  @@unique([enrollmentId, assessmentId])
+}
+
+model Attendance {
+  id           String     @id @default(cuid())
+  courseId     String
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId, courseId], references: [id, courseId])
+  lessonId     String
+  lesson       Lesson     @relation(fields: [lessonId, courseId], references: [id, courseId])
+  status       String
+
+  @@unique([enrollmentId, lessonId])
+}
+
+model CurriculumItem {
+  id             String  @id
+  programId      String
+  program        Program @relation(fields: [programId], references: [id])
+  semester       Int
+  title          String
+  category       String
+  credits        Int
+  hours          Int
+  assessmentType String
+  courseId       String?
+  course         Course? @relation(fields: [courseId], references: [id])
+  description    String
+
+  @@index([programId, semester])
+}
+
+model PersonalEvent {
+  id          String    @id @default(cuid())
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id])
+  title       String
+  description String    @default("")
+  startsAt    DateTime?
+  endsAt      DateTime?
+  startDate   String?
+  endDate     String?
+  timezone    String    @default("Europe/Moscow")
+  url         String?
+  sequence    Int       @default(0)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([studentId, startsAt])
+}
+
+model SavedSchedule {
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+  kind      String
+  targetId  String
+  label     String
+
+  @@unique([studentId, kind, targetId])
+}
+
+model ImportSource {
+  id        String          @id @default(cuid())
+  studentId String
+  student   Student         @relation(fields: [studentId], references: [id])
+  name      String
+  events    ImportedEvent[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([studentId])
+}
+
+model ImportedEvent {
+  id            String       @id @default(cuid())
+  sourceId      String
+  source        ImportSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  uid           String
+  recurrenceKey String       @default("single")
+  title         String
+  description   String
+  location      String
+  url           String?
+  startsAt      DateTime?
+  endsAt        DateTime?
+  startDate     String?
+  endDate       String?
+  timezone      String
+  cancelled     Boolean      @default(false)
+  contentHash   String
+  sequence      Int          @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([sourceId, uid, recurrenceKey])
+  @@index([sourceId, startsAt])
+}
+
+model ImportPreview {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  sourceId  String?
+  name      String
+  original  String?
+  timezone  String
+  from      String
+  to        String
+  committed Json?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([studentId, expiresAt])
+}
+
+model CalendarFeed {
+  id        String    @id @default(cuid())
+  studentId String
+  student   Student   @relation(fields: [studentId], references: [id])
+  tokenHash String    @unique
+  name      String
+  layers    String[]
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([studentId])
+}
+
+model StudentProject {
+  id           String       @id
+  studentId    String
+  student      Student      @relation(fields: [studentId], references: [id])
+  title        String
+  kind         String
+  semester     Int
+  supervisorId String
+  supervisor   Person       @relation(fields: [supervisorId], references: [id])
+  organization String?
+  description  String
+  requirements String
+  status       String
+  allowLate    Boolean      @default(false)
+  dueAt        DateTime
+  startsAt     DateTime
+  result       String?
+  feedback     String?
+  sequence     Int          @default(0)
+  version      Int          @default(0)
+  milestones   Milestone[]
+  submissions  Submission[]
+  files        FileObject[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([studentId, dueAt])
+}
+
+model Milestone {
+  id        String         @id
+  projectId String
+  project   StudentProject @relation(fields: [projectId], references: [id])
+  title     String
+  dueAt     DateTime
+  completed Boolean        @default(false)
+
+  @@index([projectId, dueAt])
+}
+
+model Submission {
+  id        String         @id @default(cuid())
+  projectId String
+  project   StudentProject @relation(fields: [projectId], references: [id])
+  version   Int
+  fileId    String         @unique
+  file      FileObject     @relation(fields: [fileId], references: [id])
+  comment   String
+  status    String         @default("SUBMITTED")
+  feedback  String?
+  late      Boolean        @default(false)
+  createdAt DateTime       @default(now())
+
+  @@unique([projectId, version])
+}
+
+model Achievement {
+  id              String               @id @default(cuid())
+  studentId       String
+  student         Student              @relation(fields: [studentId], references: [id])
+  title           String
+  category        String
+  date            String
+  description     String
+  organizer       String
+  coauthors       String               @default("")
+  evidenceUrl     String?
+  status          String               @default("DRAFT")
+  reviewerComment String?
+  version         Int                  @default(0)
+  files           FileObject[]
+  requests        RequestAchievement[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([studentId, status])
+}
+
+model Service {
+  slug         String           @id
+  title        String
+  category     String
+  summary      String
+  purpose      String
+  requirements String
+  contents     String
+  keywords     String
+  workDays     Int
+  department   String
+  cancellable  Boolean          @default(true)
+  active       Boolean          @default(true)
+  version      Int              @default(1)
+  requests     StudentRequest[]
+}
+
+model StudentRequest {
+  id              String               @id @default(cuid())
+  number          Int                  @unique @default(autoincrement())
+  studentId       String
+  student         Student              @relation(fields: [studentId], references: [id])
+  serviceSlug     String
+  service         Service              @relation(fields: [serviceSlug], references: [slug])
+  fields          Json
+  serviceSnapshot Json?
+  status          String               @default("DRAFT")
+  version         Int                  @default(0)
+  submittedAt     DateTime?
+  dueAt           DateTime?
+  resultExpiresAt DateTime?
+  history         RequestHistory[]
+  comments        RequestComment[]
+  files           FileObject[]
+  achievements    RequestAchievement[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([studentId, status, updatedAt])
+}
+
+model RequestHistory {
+  id        String         @id @default(cuid())
+  requestId String
+  request   StudentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  status    String
+  text      String
+  createdAt DateTime       @default(now())
+}
+
+model RequestComment {
+  id         String         @id @default(cuid())
+  requestId  String
+  request    StudentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorName String
+  authorRole String
+  text       String
+  createdAt  DateTime       @default(now())
+}
+
+model RequestAchievement {
+  requestId     String
+  request       StudentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement    @relation(fields: [achievementId], references: [id])
+
+  @@id([requestId, achievementId])
+}
+
+model IdempotencyRecord {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  operation   String
+  key         String
+  payloadHash String
+  result      Json
+  createdAt   DateTime @default(now())
+
+  @@unique([studentId, operation, key])
+}
+
+model Payment {
+  id            String   @id
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id])
+  title         String
+  period        String
+  amountKopecks Int
+  status        String
+  date          DateTime
+
+  @@index([studentId, date])
+}
+
+model Campaign {
+  id            String             @id
+  title         String
+  description   String
+  criteria      String
+  startsAt      DateTime
+  endsAt        DateTime
+  amountKopecks Int?
+  awards        ScholarshipAward[]
+}
+
+model ScholarshipAward {
+  id            String   @id
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id])
+  campaignId    String
+  campaign      Campaign @relation(fields: [campaignId], references: [id])
+  amountKopecks Int
+  startsAt      DateTime
+  endsAt        DateTime
+}
+
+model Contract {
+  id           String            @id
+  studentId    String
+  student      Student           @relation(fields: [studentId], references: [id])
+  number       String
+  payer        String
+  title        String
+  totalKopecks Int
+  status       String
+  supplement   String?
+  payments     PaymentSchedule[]
+  files        FileObject[]
+
+  @@index([studentId])
+}
+
+model PaymentSchedule {
+  id            String   @id
+  contractId    String
+  contract      Contract @relation(fields: [contractId], references: [id])
+  dueAt         DateTime
+  amountKopecks Int
+  paid          Boolean  @default(false)
+}
+
+model CommunityEvent {
+  id                   String       @id
+  title                String
+  category             String
+  description          String
+  organizer            String
+  location             String
+  startsAt             DateTime
+  endsAt               DateTime
+  registrationDeadline DateTime?
+  groupId              String?
+  savedBy              SavedEvent[]
+  sequence             Int          @default(0)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([startsAt])
+}
+
+model SavedEvent {
+  studentId  String
+  student    Student        @relation(fields: [studentId], references: [id])
+  eventId    String
+  event      CommunityEvent @relation(fields: [eventId], references: [id])
+  saved      Boolean        @default(true)
+  inCalendar Boolean        @default(false)
+
+  @@id([studentId, eventId])
+}
+
+model NewsPost {
+  id          String   @id
+  title       String
+  body        String
+  author      String
+  groupId     String?
+  publishedAt DateTime
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  studentId String
+  student   Student   @relation(fields: [studentId], references: [id])
+  category  String
+  title     String
+  body      String
+  href      String
+  dedupKey  String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([studentId, dedupKey])
+  @@index([studentId, createdAt])
+}
+
+model FileObject {
+  id            String          @id @default(cuid())
+  studentId     String?
+  student       Student?        @relation(fields: [studentId], references: [id])
+  purpose       String
+  originalName  String
+  storageKey    String          @unique
+  mime          String          @default("application/pdf")
+  size          Int
+  checksum      String
+  courseId      String?
+  course        Course?         @relation(fields: [courseId], references: [id])
+  projectId     String?
+  project       StudentProject? @relation(fields: [projectId], references: [id])
+  requestId     String?
+  request       StudentRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  achievementId String?
+  achievement   Achievement?    @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  contractId    String?
+  contract      Contract?       @relation(fields: [contractId], references: [id])
+  submission    Submission?
+  createdAt     DateTime        @default(now())
+
+  @@index([studentId, purpose])
+}
+
+model StudentOrder {
+  id          String   @id
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  title       String
+  description String
+  date        DateTime
+
+  @@index([studentId])
+}
+
+model SeedRun {
+  id        String   @id
+  baseDate  String
+  createdAt DateTime @default(now())
+}

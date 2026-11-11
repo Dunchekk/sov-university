@@ -10,3 +10,5 @@ test-results/
 src/generated/
 *.tsbuildinfo
 .DS_Store
+
+.local-audit.json

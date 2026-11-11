@@ -1,0 +1,38 @@
+name: ryadom
+services:
+  db:
+    image: postgres:17.7-alpine
+    environment:
+      POSTGRES_USER: ryadom
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ryadom
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U ryadom -d ryadom"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  migrate:
+    build: .
+    command: [npm, run, db:migrate]
+    environment: &app-env
+      DATABASE_URL: postgresql://ryadom:${POSTGRES_PASSWORD}@db:5432/ryadom
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-http://localhost:3000}
+      STORAGE_DIR: /app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+  app:
+    build: .
+    environment: *app-env
+    ports: ["127.0.0.1:3000:3000"]
+    volumes: ["files:/app/storage"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+volumes:
+  database:
+  files:
