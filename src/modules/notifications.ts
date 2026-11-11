@@ -1,0 +1,2 @@
+import type {Prisma} from '@/generated/prisma/client';
+export async function notify(tx:Prisma.TransactionClient,studentId:string,category:string,title:string,body:string,href:string,dedupKey:string){const preference=await tx.preference.findUnique({where:{studentId},select:{notifications:true}});const enabled=preference?.notifications as Record<string,boolean>|undefined;if(enabled?.[category]===false)return;await tx.notification.upsert({where:{studentId_dedupKey:{studentId,dedupKey}},create:{studentId,category,title,body,href,dedupKey},update:{}});}

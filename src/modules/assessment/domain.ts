@@ -23,15 +23,16 @@ export type AssessmentRow = { id: string; title: string; maxPoints: number; mand
 export function gradeSummary(assessments: AssessmentRow[], scheme: Scheme, attendance: ReturnType<typeof attendanceStats>, clock: Clock = systemClock) {
   let points = 0, maximum = 0, remaining = 0;
   const missing: string[] = [];
+  const blockedMandatory: string[] = [];
   for (const item of assessments) {
     maximum += item.maxPoints;
     const result = item.results[0];
     if (result?.status === 'PUBLISHED' && result.points !== null) points += Math.max(0, Math.min(item.maxPoints, result.points));
-    if (item.mandatory && !['PUBLISHED','SUBMITTED'].includes(result?.status ?? '')) missing.push(item.title);
+    if (item.mandatory && !['PUBLISHED','SUBMITTED'].includes(result?.status ?? '')) { missing.push(item.title); if(item.dueAt < clock.now()) blockedMandatory.push(item.title); }
     if ((!result || ['UPCOMING','SUBMITTED'].includes(result.status)) && (item.dueAt >= clock.now() || result?.status === 'SUBMITTED')) remaining += item.maxPoints;
   }
   const baseGrade = [...scheme.thresholds].sort((a,b) => a.points-b.points).filter(t => points >= t.points).at(-1)?.grade ?? 1;
   const penalty = attendance.meets === false ? scheme.attendancePenalty : 0;
   const projectedGrade = Math.max(1, Math.min(10, baseGrade - penalty));
-  return { points, maximum, remaining, missing, admitted: points >= scheme.admissionPoints && missing.length === 0, shortfall: Math.max(0, scheme.admissionPoints-points), baseGrade, penalty, projectedGrade, canReachPass: points + remaining >= scheme.passPoints, passed: points >= scheme.passPoints && missing.length === 0 };
+  return { points, maximum, remaining, missing, admitted: points >= scheme.admissionPoints && missing.length === 0, shortfall: Math.max(0, scheme.admissionPoints-points), baseGrade, penalty, projectedGrade, blockedMandatory, canReachPass: points + remaining >= scheme.passPoints && blockedMandatory.length === 0, passed: points >= scheme.passPoints && missing.length === 0 };
 }

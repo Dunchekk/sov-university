@@ -3,7 +3,7 @@ import fontkit from '@pdf-lib/fontkit';
 import { readFile } from 'node:fs/promises';
 export async function demoPdf(title: string, lines: string[]) {
   const document = await PDFDocument.create(); document.registerFontkit(fontkit);
-  const font = await document.embedFont(await readFile('public/fonts/Inter-Regular.ttf'), { subset: true });
+  const font = await document.embedFont(await readFile('public/fonts/Inter-Regular.ttf'), { subset: false });
   const page = document.addPage([595,842]);
   page.drawText('РЯДОМ / УНИВЕРСИТЕТ СЕВЕРНЫЙ', { x:48,y:780,size:11,font,color:rgb(.28,.30,.34) });
   page.drawRectangle({ x:48,y:714,width:499,height:40,color:rgb(.95,.96,.98) });

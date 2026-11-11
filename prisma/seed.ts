@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import {academicExtras} from './academic-extras';
 import { db } from '../src/server/db';
 import { hashPassword } from '../src/server/password';
 import { addDays, atTime, dateKey } from '../src/shared/lib/time';
@@ -118,4 +119,4 @@ async function main() {
   await db.seedRun.upsert({where:{id:'v1'},update:{},create:{id:'v1',baseDate:base}});
   console.log('Демонстрационные данные загружены. Доступы: .local/demo-credentials.json (не добавлять в Git).');
 }
-main().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>db.$disconnect());
+main().then(academicExtras).catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>db.$disconnect());

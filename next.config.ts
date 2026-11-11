@@ -3,6 +3,7 @@ const config: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["@node-rs/argon2"],
   poweredByHeader: false,
+  devIndicators: false,
   async headers() {
     return [{ source: "/:path*", headers: [
       { key: "X-Content-Type-Options", value: "nosniff" },

@@ -1,0 +1,9 @@
+import {z} from 'zod';
+import {db} from '@/server/db';
+import {invariant,notFound} from '@/server/errors';
+import {safeUrl} from '@/server/http';
+import type {StudentContext} from '@/server/access';
+import {validTimezone} from '@/shared/lib/time';
+export const personalSchema=z.object({title:z.string().trim().min(1).max(180),description:z.string().max(2000).default(''),timezone:z.string().refine(validTimezone).default('Europe/Moscow'),url:z.union([safeUrl,z.literal('')]).optional(),startsAt:z.iso.datetime().nullable().default(null),endsAt:z.iso.datetime().nullable().default(null),startDate:z.iso.date().nullable().default(null),endDate:z.iso.date().nullable().default(null),sequence:z.number().int().min(0).optional()}).strict().superRefine((v,ctx)=>{const timed=v.startsAt&&v.endsAt&&v.endsAt>v.startsAt&&!v.startDate&&!v.endDate;const allDay=v.startDate&&v.endDate&&v.endDate>v.startDate&&!v.startsAt&&!v.endsAt;if(!timed&&!allDay)ctx.addIssue({code:'custom',message:'Конец должен быть позже начала. Укажите время или даты для всего дня.',path:['endsAt']});});
+export async function savePersonal(student:StudentContext,input:z.infer<typeof personalSchema>,id?:string){const {sequence,...values}=input;const data={...values,url:values.url||null};if(!id)return db.personalEvent.create({data:{...data,studentId:student.id}});const result=await db.personalEvent.updateMany({where:{id,studentId:student.id,deletedAt:null,sequence},data:{...data,sequence:{increment:1}}});invariant(result.count===1,409,'CONFLICT','Событие изменилось или недоступно. Обновите календарь.');return {id};}
+export async function deletePersonal(student:StudentContext,id:string){const item=await db.personalEvent.updateMany({where:{id,studentId:student.id,deletedAt:null},data:{deletedAt:new Date(),sequence:{increment:1}}});if(!item.count)throw notFound();return {ok:true};}

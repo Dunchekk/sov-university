@@ -1,0 +1,6 @@
+import Link from 'next/link';
+import {addDays,dateKey,formatDate,formatTime} from '@/shared/lib/time';
+import {eventsOnDay,eventDate} from './layout';
+import {eventLabels,type CalendarEvent} from './types';
+import s from './calendar.module.css';
+export function HomeCalendar({events,date}:{events:CalendarEvent[];date:string}){return <div className={s.widget}>{Array.from({length:4},(_,i)=>addDays(date,i)).map(day=>{const list=eventsOnDay(events.filter(e=>!e.cancelled),day);return <div className={s.widgetDay} key={day}><Link className={s.widgetTitle} href={`/calendar?date=${day}&view=day`}><span>{day===dateKey()?'Сегодня':formatDate(`${day}T12:00:00Z`,{weekday:'short'})}</span><strong>{Number(day.slice(-2))}</strong></Link>{list.slice(0,3).map(event=><Link key={event.id} className={s.event} data-type={event.type} href={`/calendar?date=${eventDate(event)}&event=${event.id}`}><small>{event.startsAt?formatTime(event.startsAt):'Весь день'} · {eventLabels[event.type]}</small><strong>{event.title}</strong></Link>)}{!list.length&&<p className={s.widgetEmpty}>Свободный день<br/>Время для своих планов</p>}{list.length>3&&<Link className={s.more} href={`/calendar?date=${day}&view=day`}>Ещё {list.length-3}</Link>}</div>;})}</div>}

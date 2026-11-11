@@ -3,11 +3,12 @@ import { requireEnrollment,type StudentContext } from '@/server/access';
 import { attendanceStats,gradeSummary,schemeSchema } from '@/modules/assessment/domain';
 export async function courseResult(student:StudentContext,courseId:string){
  const enrollment=await requireEnrollment(student,courseId);const scheme=schemeSchema.parse(enrollment.course.scheme);
- const [records,remaining,assessments]=await Promise.all([
-  db.attendance.findMany({where:{enrollmentId:enrollment.id},include:{lesson:{select:{startsAt:true,endsAt:true,cancelled:true,title:true}}},orderBy:{lesson:{startsAt:'desc'}}}),
-  db.lesson.count({where:{courseId,groupId:student.groupId,startsAt:{gt:new Date()},cancelled:false}}),
+ const [lessons,remaining,assessments]=await Promise.all([
+  db.lesson.findMany({where:{courseId,groupId:student.groupId,endsAt:{lte:new Date()},kind:{not:'Экзамен'}},include:{attendance:{where:{enrollmentId:enrollment.id},select:{id:true,status:true}}},orderBy:{startsAt:'desc'}}),
+  db.lesson.count({where:{courseId,groupId:student.groupId,startsAt:{gt:new Date()},cancelled:false,kind:{not:'Экзамен'}}}),
   db.assessment.findMany({where:{courseId},include:{results:{where:{enrollmentId:enrollment.id}}},orderBy:{dueAt:'asc'}})
  ]);
+ const records=lessons.map(lesson=>({id:lesson.attendance[0]?.id??`unrecorded:${lesson.id}`,status:lesson.attendance[0]?.status??'UNRECORDED',lesson:{startsAt:lesson.startsAt,endsAt:lesson.endsAt,cancelled:lesson.cancelled,title:lesson.title}}));
  const attendance=attendanceStats(records,scheme,remaining);const grade=gradeSummary(assessments,scheme,attendance);
  return {enrollment,scheme,attendance,grade,assessments,records};
 }

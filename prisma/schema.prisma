@@ -216,6 +216,8 @@ model Enrollment {
   results               Result[]
   attendance            Attendance[]
 
+  retakes Retake[]
+
   @@unique([studentId, courseId])
   @@unique([id, courseId])
 }
@@ -735,4 +737,20 @@ model SeedRun {
   id        String   @id
   baseDate  String
   createdAt DateTime @default(now())
+}
+
+model Retake {
+  id           String     @id
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+  title        String
+  startsAt     DateTime
+  endsAt       DateTime
+  location     String
+  reason       String
+  consultation String
+  sequence     Int        @default(0)
+  updatedAt    DateTime   @updatedAt
+
+  @@index([enrollmentId, startsAt])
 }
