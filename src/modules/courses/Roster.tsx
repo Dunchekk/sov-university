@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Avatar, Button, Empty, ui } from "@/shared/ui/primitives";
+const subscribe = () => () => {};
 type Data = {
   items: { id: string; name: string; group: { name: string } }[];
   total: number;
@@ -14,6 +15,13 @@ export function Roster({
   initial: Data;
   teacher: { name: string; email: string; consultation: string };
 }) {
+  // The server-rendered list is readable immediately. Enable controls only
+  // after hydration so an early input cannot be reset by React mounting.
+  const ready = useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
   const [data, setData] = useState(initial),
     [q, setQ] = useState(""),
     [page, setPage] = useState(1),
@@ -45,6 +53,7 @@ export function Roster({
         <label>
           Найти участника
           <input
+            disabled={!ready}
             value={q}
             onChange={(e) => {
               setQ(e.target.value);
@@ -55,7 +64,11 @@ export function Roster({
         </label>
         <label>
           Роль
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
+          <select
+            disabled={!ready}
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+          >
             <option value="all">Все участники</option>
             <option value="teacher">Преподаватель</option>
             <option value="student">Студенты</option>
@@ -88,14 +101,17 @@ export function Roster({
           </div>
           {!data.items.length && <Empty title="Участники не найдены" />}
           <div className={ui.row}>
-            <Button disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+            <Button
+              disabled={!ready || page === 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
               Назад
             </Button>
             <span className={ui.caption}>
               Страница {page} · {data.total} участников
             </span>
             <Button
-              disabled={page * 20 >= data.total}
+              disabled={!ready || page * 20 >= data.total}
               onClick={() => setPage((p) => p + 1)}
             >
               Далее

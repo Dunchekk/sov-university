@@ -8,6 +8,52 @@ const wrap = (...events: string[]) =>
 const event = (body: string) => `BEGIN:VEVENT\r\n${body}\r\nEND:VEVENT`;
 const fixed =
   "UID:series\r\nDTSTART;TZID=Europe/Berlin:20260322T100000\r\nDURATION:PT1H\r\nRRULE:FREQ=WEEKLY;COUNT=3\r\nEXDATE;TZID=Europe/Berlin:20260329T100000\r\nSUMMARY:Семинар";
+test("an imported midnight instant appears in its calendar day and no adjacent day", async ({
+  student,
+}) => {
+  const original = wrap(
+    event("UID:midnight\r\nDTSTART:20260321T210000Z\r\nSUMMARY:Полночь"),
+  );
+  const preview = await student.post("/api/calendar/imports/preview", {
+    multipart: {
+      name: "Midnight regression",
+      timezone: "Europe/Moscow",
+      from: "2026-03-22",
+      to: "2026-03-23",
+      file: {
+        name: "instant.ics",
+        mimeType: "text/calendar",
+        buffer: Buffer.from(original),
+      },
+    },
+  });
+  expect(preview.status()).toBe(200);
+  const p = await preview.json();
+  expect(p.total).toBe(1);
+  const committed = await student.post(`/api/calendar/imports/${p.id}/commit`, {
+    data: {},
+  });
+  expect(committed.status()).toBe(200);
+  const source = (await committed.json()).sourceId;
+  try {
+    for (const [from, to, count] of [
+      ["2026-03-21", "2026-03-22", 0],
+      ["2026-03-22", "2026-03-23", 1],
+      ["2026-03-23", "2026-03-24", 0],
+    ] as const) {
+      const events = await (
+        await student.get(
+          `/api/calendar/events?from=${from}&to=${to}&types=PERSONAL`,
+        )
+      ).json();
+      expect(
+        events.filter((e: { sourceId: string }) => e.sourceId === source),
+      ).toHaveLength(count);
+    }
+  } finally {
+    await student.delete(`/api/calendar/imports/sources/${source}`);
+  }
+});
 test("ICS preview/commit ownership, retry, updates, replacement and expiry", async ({
   student,
   other,

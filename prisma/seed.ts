@@ -18,7 +18,7 @@ async function main() {
     console.log("Demo уже загружено; изменения сохранены.");
     return;
   }
-  const base = process.env.DEMO_BASE_DATE ?? dateKey();
+  const base = process.env.DEMO_BASE_DATE || dateKey();
   const day = (n: number, time = "10:00") => atTime(addDays(base, n), time);
   const credentialsPath =
     process.env.DEMO_CREDENTIALS_FILE ?? ".local/demo-credentials.json";

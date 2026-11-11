@@ -17,11 +17,22 @@ export const login = async (
   which = "student-a",
 ) => {
   const all = await credentials();
-  const response = await request.post("/api/auth/sign-in/email", {
-    data: all[which],
-    headers: { Origin: origin },
-  });
-  expect(response.status()).toBe(200);
+  let response;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    response = await request.post("/api/auth/sign-in/email", {
+      data: all[which],
+      headers: { Origin: origin },
+    });
+    if (response.status() !== 429) break;
+    const seconds = Number(
+      response.headers()["x-retry-after"] ?? response.headers()["retry-after"],
+    );
+    // Honour the server's short auth burst window between browser projects.
+    // Never bypass the separate 15-minute brute-force limit.
+    if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 15) break;
+    await new Promise((resolve) => setTimeout(resolve, seconds * 1000 + 100));
+  }
+  expect(response!.status()).toBe(200);
 };
 export const test = base.extend<
   { studentPage: Page; other: APIRequestContext; student: APIRequestContext },

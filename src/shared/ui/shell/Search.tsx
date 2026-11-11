@@ -53,7 +53,10 @@ export function Search() {
     <>
       <button
         className={s.searchButton}
-        onClick={() => setOpen(true)}
+        onClick={(e) => {
+          e.currentTarget.focus();
+          setOpen(true);
+        }}
         aria-label="Глобальный поиск"
       >
         <SearchIcon size={18} />

@@ -4,10 +4,19 @@ import {
   gradeSummary,
   type Scheme,
 } from "@/modules/assessment/domain";
-import { timedLayout } from "@/modules/calendar/layout";
+import { timedLayout, eventsOnDay } from "@/modules/calendar/layout";
 import { readLimited } from "@/server/body";
 import type { CalendarEvent } from "@/modules/calendar/types";
 const clock = { now: () => new Date("2026-11-11T12:00:00Z") };
+it("a midnight instant belongs only to its new Moscow day", () => {
+  const instant = {
+    startsAt: "2026-11-11T21:00:00.000Z",
+    endsAt: "2026-11-11T21:00:00.000Z",
+  } as CalendarEvent;
+  expect(eventsOnDay([instant], "2026-11-11")).toHaveLength(0);
+  expect(eventsOnDay([instant], "2026-11-12")).toHaveLength(1);
+  expect(eventsOnDay([instant], "2026-11-13")).toHaveLength(0);
+});
 const scheme: Scheme = {
   version: 1,
   type: "POINTS",

@@ -44,7 +44,10 @@ export function AttendanceIndicator({
           small
           aria-label="Как посещаемость влияет на результат"
           title={text}
-          onClick={() => setOpen(true)}
+          onClick={(e) => {
+            e.currentTarget.focus();
+            setOpen(true);
+          }}
           onFocus={(e) =>
             e.currentTarget.setAttribute("aria-description", text)
           }

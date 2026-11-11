@@ -1,0 +1,23 @@
+services:
+  app:
+    ports: !reset []
+    environment:
+      APP_URL: https://${DOMAIN:?Set DOMAIN}
+      TRUSTED_ORIGINS: https://${DOMAIN:?Set DOMAIN}
+      TRUST_PROXY: "1"
+  caddy:
+    image: caddy:2.11.9-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,18 @@
+{
+	# Even reverse-proxy error logs can contain request URLs. Disable access
+	# logs and discard HTTP error records containing bearer feed URLs.
+	log default {
+		exclude http.log.access http.log.error
+	}
+}
+{$DOMAIN} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+	header Referrer-Policy "no-referrer"
+	request_body {
+		max_size 11MB
+	}
+	reverse_proxy app:3000 {
+		header_up X-Real-IP {remote_host}
+	}
+}

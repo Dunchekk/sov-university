@@ -21,9 +21,11 @@ export const formatDate = (
   date: Date | string,
   options: Intl.DateTimeFormatOptions = { day: "numeric", month: "long" },
 ) =>
-  new Intl.DateTimeFormat("ru-RU", { timeZone: TIMEZONE, ...options }).format(
-    new Date(date),
-  );
+  // WebKit capitalizes Russian short weekdays while Node/Chromium do not.
+  // Normalize their case to keep server and browser hydration identical.
+  new Intl.DateTimeFormat("ru-RU", { timeZone: TIMEZONE, ...options })
+    .format(new Date(date))
+    .toLocaleLowerCase("ru-RU");
 export const formatTime = (date: Date | string) =>
   formatDate(date, { hour: "2-digit", minute: "2-digit" });
 export const money = (kopecks: number) =>

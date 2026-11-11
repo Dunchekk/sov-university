@@ -113,7 +113,8 @@ export function Calendar({
       className={`${s.event} ${compact ? s.compact : ""} ${style ? s.timedEvent : ""} ${e.cancelled ? s.cancelled : ""} ${e.comparison ? s.comparison : ""}`}
       data-type={e.type}
       style={style}
-      onClick={() => {
+      onClick={(click) => {
+        click.currentTarget.focus();
         setEdit(false);
         setConfirmDelete(false);
         setError("");
@@ -183,12 +184,21 @@ export function Calendar({
           </div>
           <Button
             aria-label="Сравнить расписания"
-            onClick={() => setCompare(true)}
+            onClick={(e) => {
+              e.currentTarget.focus();
+              setCompare(true);
+            }}
           >
             <SlidersHorizontal size={16} />
             <span>Расписания</span>
           </Button>
-          <Button variant="primary" onClick={() => setCreate(true)}>
+          <Button
+            variant="primary"
+            onClick={(e) => {
+              e.currentTarget.focus();
+              setCreate(true);
+            }}
+          >
             <Plus size={16} />
             Событие
           </Button>

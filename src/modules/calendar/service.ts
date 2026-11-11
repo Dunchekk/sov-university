@@ -155,6 +155,9 @@ export async function calendarEvents(
             },
             OR: [
               { startsAt: { lt: to }, endsAt: { gt: from } },
+              // A zero-duration VEVENT belongs to the day of its start,
+              // including precisely midnight at the lower range boundary.
+              { startsAt: { gte: from, lt: to } },
               { startDate: { lt: q.to }, endDate: { gt: q.from } },
             ],
           },

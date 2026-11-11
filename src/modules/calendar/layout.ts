@@ -15,12 +15,16 @@ export function calendarRange(date: string, view: string) {
 export function eventsOnDay(events: CalendarEvent[], day: string) {
   const from = dayStart(day).getTime(),
     to = dayStart(addDays(day, 1)).getTime();
-  return events.filter((e) =>
-    e.startsAt && e.endsAt
-      ? new Date(e.startsAt).getTime() < to &&
-        new Date(e.endsAt).getTime() > from
-      : e.startDate && e.endDate && e.startDate <= day && e.endDate > day,
-  );
+  return events.filter((e) => {
+    if (e.startsAt && e.endsAt) {
+      const start = new Date(e.startsAt).getTime(),
+        end = new Date(e.endsAt).getTime();
+      return start === end
+        ? start >= from && start < to
+        : start < to && end > from;
+    }
+    return e.startDate && e.endDate && e.startDate <= day && e.endDate > day;
+  });
 }
 export function timedLayout(events: CalendarEvent[], day: string) {
   const start = dayStart(day).getTime();
