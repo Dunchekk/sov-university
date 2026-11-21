@@ -153,9 +153,25 @@ model Person {
   department   String
   email        String
   consultation String
+  profile      LecturerProfile?
   courses      Course[]
   lessons      Lesson[]
   projects     StudentProject[]
+}
+
+model LecturerProfile {
+  personId       String   @id
+  person         Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  avatar         String
+  position       String
+  phoneExtension String
+  office         String
+  since          Int
+  biography      String
+  education      String[]
+  languages      String[]
+  interests      String[]
+  topics         String
 }
 
 model RosterPerson {

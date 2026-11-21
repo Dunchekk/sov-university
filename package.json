@@ -18,6 +18,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:community": "tsx prisma/publish-community-demo.ts",
+    "db:seed:lecturers": "tsx prisma/publish-lecturer-demo.ts",
     "test:setup": "node scripts/setup-test.mjs",
     "test:browsers": "playwright test --project=firefox --project=webkit"
   },

@@ -3,6 +3,7 @@ import { academicExtras } from "./academic-extras";
 import { seedCommunity } from "./seed-community";
 import { seedCompletedCourses } from "./seed-completed-courses";
 import { seedCourseMaterials } from "./seed-course-materials";
+import { seedLecturers } from "./seed-lecturers";
 import { db } from "../src/server/db";
 import { hashPassword } from "../src/server/password";
 import { addDays, atTime, dateKey } from "../src/shared/lib/time";
@@ -13,31 +14,8 @@ import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Prisma } from "../src/generated/prisma/client";
 
-const demoLecturers = [
-  ["Анна Воронцова", "Анна Сергеевна Воронцова"],
-  ["Дмитрий Лебедев", "Дмитрий Андреевич Лебедев"],
-  ["Елена Белова", "Елена Викторовна Белова"],
-  ["Илья Новиков", "Илья Александрович Новиков"],
-  ["Ольга Крылова", "Ольга Михайловна Крылова"],
-  ["Артём Волков", "Артём Павлович Волков"],
-  ["Мария Лазарева", "Мария Алексеевна Лазарева"],
-  ["Павел Орлов", "Павел Николаевич Орлов"],
-] as const;
-
 async function main() {
-  // Add patronymics to existing demo profiles without overwriting custom names.
-  await db.$transaction(
-    demoLecturers.map(([previousName, name], i) =>
-      db.person.updateMany({
-        where: {
-          id: `lecturer-${i}`,
-          email: `lecturer${i + 1}@example.org`,
-          name: previousName,
-        },
-        data: { name },
-      }),
-    ),
-  );
+  await seedLecturers();
   const base = process.env.DEMO_BASE_DATE || dateKey();
   if (
     !process.env.REGENERATE_DEMO_FILES &&
@@ -209,22 +187,6 @@ async function main() {
       },
     });
   }
-  for (const [i, [, name]] of demoLecturers.entries())
-    await db.person.upsert({
-      where: { id: `lecturer-${i}` },
-      update: {},
-      create: {
-        id: `lecturer-${i}`,
-        name,
-        department:
-          i < 4
-            ? "Кафедра цифровых продуктов"
-            : "Кафедра информационных систем",
-        email: `lecturer${i + 1}@example.org`,
-        consultation:
-          "Среда, 16:00–17:00. По предварительному обращению в учебный офис.",
-      },
-    });
   const names = [
     "Арина Фомина",
     "Даниил Морозов",
