@@ -92,6 +92,8 @@ model Group {
   programId String
   program   Program        @relation(fields: [programId], references: [id])
   year      Int
+  curatorId String?
+  curator   Person?        @relation(fields: [curatorId], references: [id], onDelete: SetNull)
   students  Student[]
   roster    RosterPerson[]
   lessons   Lesson[]
@@ -148,15 +150,17 @@ model Preference {
 }
 
 model Person {
-  id           String           @id
-  name         String
-  department   String
-  email        String
-  consultation String
-  profile      LecturerProfile?
-  courses      Course[]
-  lessons      Lesson[]
-  projects     StudentProject[]
+  id                  String           @id
+  name                String
+  department          String
+  email               String
+  consultation        String
+  profile             LecturerProfile?
+  courses             Course[]
+  lessons             Lesson[]
+  projects            StudentProject[]
+  curatedGroups       Group[]
+  retakeConsultations Retake[]
 }
 
 model LecturerProfile {
@@ -175,10 +179,11 @@ model LecturerProfile {
 }
 
 model RosterPerson {
-  id      String @id
+  id      String  @id
   name    String
+  avatar  String?
   groupId String
-  group   Group  @relation(fields: [groupId], references: [id])
+  group   Group   @relation(fields: [groupId], references: [id])
 }
 
 model Department {
@@ -764,17 +769,19 @@ model SeedRun {
 }
 
 model Retake {
-  id           String     @id
-  enrollmentId String
-  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
-  title        String
-  startsAt     DateTime
-  endsAt       DateTime
-  location     String
-  reason       String
-  consultation String
-  sequence     Int        @default(0)
-  updatedAt    DateTime   @updatedAt
+  id                     String     @id
+  enrollmentId           String
+  enrollment             Enrollment @relation(fields: [enrollmentId], references: [id])
+  title                  String
+  startsAt               DateTime
+  endsAt                 DateTime
+  location               String
+  reason                 String
+  consultation           String
+  consultationLecturerId String?
+  consultationLecturer   Person?    @relation(fields: [consultationLecturerId], references: [id], onDelete: SetNull)
+  sequence               Int        @default(0)
+  updatedAt              DateTime   @updatedAt
 
   @@index([enrollmentId, startsAt])
 }

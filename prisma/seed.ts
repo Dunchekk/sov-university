@@ -81,7 +81,13 @@ async function main() {
     await db.group.upsert({
       where: { id },
       update: {},
-      create: { id, name, programId, year },
+      create: {
+        id,
+        name,
+        programId,
+        year,
+        curatorId: id === "d-21" || id === "p-22" ? "lecturer-0" : undefined,
+      },
     });
   let credentials: Record<string, { email: string; password: string }> = {};
   try {
@@ -215,6 +221,7 @@ async function main() {
     "Александра Миронова",
     "Михаил Соколов",
   ];
+  const portraits = new Set([0, 1, 8, 14, 22, 24]);
   for (let i = 0; i < names.length; i++)
     await db.rosterPerson.upsert({
       where: { id: `roster-${i}` },
@@ -222,6 +229,9 @@ async function main() {
       create: {
         id: `roster-${i}`,
         name: names[i],
+        avatar: portraits.has(i)
+          ? `/people/students/roster-${i}.webp`
+          : undefined,
         groupId: i < 18 || i === 24 ? "d-21" : "p-22",
       },
     });
