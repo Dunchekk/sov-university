@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { auth, trustedOrigins } from "./auth";
 import { db } from "./db";
 import { AppError, invariant, notFound } from "./errors";
@@ -17,14 +18,14 @@ export async function requireStudent(requestHeaders?: Headers) {
   return { ...student, name: session.user.name, email: session.user.email };
 }
 export type StudentContext = Awaited<ReturnType<typeof requireStudent>>;
-export async function pageStudent() {
+export const pageStudent = cache(async function pageStudent() {
   try {
     return await requireStudent();
   } catch (e) {
     if (e instanceof AppError && e.status === 401) redirect("/login");
     throw e;
   }
-}
+});
 export function assertOrigin(request: Request) {
   const origin = request.headers.get("origin");
   invariant(
