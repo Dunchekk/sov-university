@@ -1,5 +1,12 @@
 import { db } from "../src/server/db";
 import { addDays, atTime } from "../src/shared/lib/time";
+import { editionEvents, editionNews } from "./community-edition";
+import {
+  legacyEventPlaceholder,
+  legacyEventStories,
+  legacyNewsPlaceholder,
+  legacyNewsStories,
+} from "./legacy-community-content";
 
 type Event = {
   cover: string;
@@ -304,16 +311,53 @@ export async function seedCommunity(base: string) {
     publishedAt: atTime(addDays(base, -(i + 1)), "10:00"),
   }));
 
-  await db.$transaction([
+  for (const { id, cover, day, time, paragraphs, ...item } of editionEvents) {
+    const date = addDays(base, day);
+    eventRows.push({
+      ...item,
+      id: `edition-event-${id}`,
+      cover: `/community/covers/${cover}.webp`,
+      startsAt: atTime(date, time[0]),
+      endsAt: atTime(date, time[1]),
+      groupId: null,
+      description: paragraphs.join("\n\n"),
+    });
+  }
+  for (const { id, cover, day, paragraphs, ...item } of editionNews) {
+    newsRows.push({
+      ...item,
+      id: `edition-news-${id}`,
+      cover: `/community/covers/${cover}.webp`,
+      groupId: null,
+      publishedAt: atTime(addDays(base, day), "12:00"),
+      body: paragraphs.join("\n\n"),
+    });
+  }
+
+  const [addedEvents, addedNews, ...revisions] = await db.$transaction([
     db.communityEvent.createMany({ data: eventRows, skipDuplicates: true }),
     db.newsPost.createMany({ data: newsRows, skipDuplicates: true }),
-    // The original fixtures have no covers. Enrich them without replacing IDs
-    // that are referenced by saved events, calendars and notifications.
-    ...eventRows.map(({ id, ...data }) =>
-      db.communityEvent.updateMany({ where: { id, cover: null }, data }),
+    // A few fixture IDs were reused across editions. Only update the original
+    // titles whose text is still the shared placeholder.
+    ...legacyEventStories.map(({ id, title, paragraphs }) =>
+      db.communityEvent.updateMany({
+        where: { id, title, description: legacyEventPlaceholder },
+        data: { description: paragraphs.join("\n\n") },
+      }),
     ),
-    ...newsRows.map(({ id, ...data }) =>
-      db.newsPost.updateMany({ where: { id, cover: null }, data }),
+    ...legacyNewsStories.map(({ id, title, paragraphs }) =>
+      db.newsPost.updateMany({
+        where: { id, title, body: legacyNewsPlaceholder },
+        data: { body: paragraphs.join("\n\n") },
+      }),
     ),
   ]);
+  return {
+    eventsAdded: addedEvents.count,
+    newsAdded: addedNews.count,
+    textsUpdated: revisions.reduce(
+      (count, revision) => count + revision.count,
+      0,
+    ),
+  };
 }

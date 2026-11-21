@@ -54,10 +54,11 @@ test("header shows the current section and global search filters by category", a
   await expect(news).not.toHaveCSS("background-color", transparent);
   await field.hover();
   await expect(news).toHaveCSS("background-color", transparent);
+  const firstResult = dialog.getByRole("option").first();
   await field.press("ArrowDown");
-  await expect(event).toHaveAttribute("aria-selected", "true");
-  await expect(event).toHaveCSS("outline-width", "2px");
-  await expect(event).toHaveCSS("background-color", transparent);
+  await expect(firstResult).toHaveAttribute("aria-selected", "true");
+  await expect(firstResult).toHaveCSS("outline-width", "2px");
+  await expect(firstResult).toHaveCSS("background-color", transparent);
 
   await dialog.getByRole("button", { name: "Новости", exact: true }).click();
   await expect(news).toBeVisible();

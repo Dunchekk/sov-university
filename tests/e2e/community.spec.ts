@@ -45,9 +45,9 @@ test("community filters publications and opens illustrated details", async ({
     "aria-current",
     "page",
   );
-  await expect(feed.getByRole("listitem")).toHaveCount(23);
+  await expect(feed.getByRole("listitem")).toHaveCount(47);
   await tabs.getByRole("link", { name: "Новости" }).click();
-  await expect(feed.getByRole("listitem")).toHaveCount(10);
+  await expect(feed.getByRole("listitem")).toHaveCount(22);
   await feed.getByRole("link").first().click();
   await expect(page).toHaveURL(/\/community\/news\//);
   await expect(page.locator("main article p").nth(1)).toBeVisible();
@@ -129,6 +129,44 @@ test("community filters publications and opens illustrated details", async ({
   await expect(
     page.getByRole("button", { name: /в мой календарь|в моём календаре/i }),
   ).toBeVisible();
+});
+
+test("the new edition shows original illustrated event and news stories", async ({
+  studentPage: page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  const cases = [
+    {
+      path: "/community/edition-event-winter-bird-count",
+      title: "Кого слышно в зимнем парке",
+      paragraph: "В каждой паре один человек наблюдает",
+      cover: "city-birds.webp",
+    },
+    {
+      path: "/community/news/edition-news-pond-water-project",
+      title: "Студенты собрали первый атлас жизни в городском пруду",
+      paragraph: "Рядом с каждым снимком указаны место отбора",
+      cover: "microscope.webp",
+    },
+  ];
+  for (const item of cases) {
+    await page.goto(item.path);
+    const article = page.getByRole("article");
+    await expect(article.getByRole("heading", { level: 1 })).toHaveText(
+      item.title,
+    );
+    await expect(
+      article.getByText(item.paragraph, { exact: false }),
+    ).toBeVisible();
+    const cover = article.locator("img");
+    await expect(cover).toHaveAttribute("src", new RegExp(item.cover));
+    await cover.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() =>
+        cover.evaluate((image) => (image as HTMLImageElement).naturalWidth),
+      )
+      .toBeGreaterThan(0);
+  }
 });
 
 test("home highlights mix events and news and fade only scrollable edges", async ({
