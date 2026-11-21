@@ -1,5 +1,6 @@
 import { db } from "@/server/db";
 import { requireEnrollment, type StudentContext } from "@/server/access";
+import type { Prisma } from "@/generated/prisma/client";
 import {
   attendanceStats,
   gradeSummary,
@@ -53,9 +54,12 @@ export async function courseResult(student: StudentContext, courseId: string) {
   const grade = gradeSummary(assessments, scheme, attendance);
   return { enrollment, scheme, attendance, grade, assessments, records };
 }
-export async function myCourses(student: StudentContext) {
+export async function myCourses(
+  student: StudentContext,
+  filter: Pick<Prisma.EnrollmentWhereInput, "status"> = {},
+) {
   const enrolled = await db.enrollment.findMany({
-    where: { studentId: student.id },
+    where: { studentId: student.id, status: filter.status },
     select: { courseId: true },
   });
   return Promise.all(enrolled.map((e) => courseResult(student, e.courseId)));

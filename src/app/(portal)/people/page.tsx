@@ -88,7 +88,7 @@ export default async function PeoplePage({
           ["departments", "Подразделения"],
         ].map(([id, label]) => ({ id, label, href: `/people?tab=${id}` }))}
       />
-      <form className={ui.row}>
+      <form className={ui.filterBar}>
         <input type="hidden" name="tab" value={tab} />
         <label>
           Поиск

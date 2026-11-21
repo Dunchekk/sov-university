@@ -33,7 +33,7 @@ export function PersonalForm({
           const body = {
             title: f.get("title"),
             description: f.get("description"),
-            url: f.get("url"),
+            url: event?.url ?? "",
             timezone: "Europe/Moscow",
             sequence: event?.sequence,
             ...(allDay
@@ -130,15 +130,6 @@ export function PersonalForm({
           name="description"
           maxLength={2000}
           defaultValue={event?.description}
-        />
-      </label>
-      <label>
-        Ссылка HTTPS, необязательно
-        <input
-          type="url"
-          name="url"
-          defaultValue={event?.url}
-          placeholder="https://"
         />
       </label>
       {error && (

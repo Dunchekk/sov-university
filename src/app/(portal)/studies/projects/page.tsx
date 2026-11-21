@@ -34,7 +34,7 @@ export default async function ProjectsPage({
         title="Практика и проекты"
         description="От первой идеи до защиты — каждый этап на своём месте."
       />
-      <form className={ui.row}>
+      <form className={ui.filterBar}>
         <label>
           Тип работы
           <select name="kind" defaultValue={p.kind ?? ""}>

@@ -1,3 +1,62 @@
+.summaryCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--space-4);
+}
+
+.summaryGroup {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.assessmentHeader {
+  position: relative;
+}
+
+.assessmentHeading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.helpButton {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.helpButton:hover,
+.helpButton[aria-expanded="true"] {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.helpPanel {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline-start: 0;
+  display: grid;
+  gap: var(--space-3);
+  width: min(480px, 100%);
+  max-height: 65dvh;
+  overflow-y: auto;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-menu);
+  font-size: var(--text-sm);
+}
+
 .inline {
   display: grid;
   gap: var(--space-3);

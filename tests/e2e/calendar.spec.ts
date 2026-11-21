@@ -8,6 +8,55 @@ const wrap = (...events: string[]) =>
 const event = (body: string) => `BEGIN:VEVENT\r\n${body}\r\nEND:VEVENT`;
 const fixed =
   "UID:series\r\nDTSTART;TZID=Europe/Berlin:20260322T100000\r\nDURATION:PT1H\r\nRRULE:FREQ=WEEKLY;COUNT=3\r\nEXDATE;TZID=Europe/Berlin:20260329T100000\r\nSUMMARY:Семинар";
+
+test("exam tags match the schedule and the mini calendar marks the session independently of filters", async ({
+  studentPage: page,
+}) => {
+  const [retake, exams] = await Promise.all([
+    db.retake.findUniqueOrThrow({ where: { id: "retake-a" } }),
+    db.lesson.findMany({
+      where: { id: { startsWith: "exam-enroll-student-a-" } },
+      orderBy: { startsAt: "asc" },
+    }),
+  ]);
+  const firstDay = dateKey(exams[0].startsAt);
+  const lastDay = dateKey(exams.at(-1)!.startsAt);
+  const retakeDay = dateKey(retake.startsAt);
+  await page.goto(`/calendar?date=${retakeDay}&view=week&event=${retake.id}`);
+  const dialog = page.getByRole("dialog", { name: retake.title, exact: true });
+  const badge = dialog.getByText("Экзамен", { exact: true });
+  const examCard = page
+    .locator('button[data-type="EXAM"]')
+    .filter({
+      hasText: retake.title,
+    })
+    .first();
+  const colors = await examCard.evaluate((element) => ({
+    text: getComputedStyle(element).color,
+    background: getComputedStyle(element).backgroundColor,
+  }));
+  await expect(badge).toHaveCSS("color", colors.text);
+  await expect(badge).toHaveCSS("background-color", colors.background);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+
+  const picker = page.getByRole("region", { name: "Выбор даты" });
+  await expect(
+    picker.locator(`[data-date="${retakeDay}"]`),
+  ).not.toHaveAttribute("data-session", "true");
+  await page.goto(`/calendar?date=${firstDay}&view=month&types=LESSON`);
+  await expect(page.locator('button[data-type="EXAM"]')).toHaveCount(0);
+  for (const day of [firstDay, addDays(firstDay, 1), lastDay]) {
+    await expect(picker.locator(`[data-date="${day}"]`)).toHaveAttribute(
+      "data-session",
+      "true",
+    );
+  }
+  await expect(
+    picker.locator(`[data-date="${addDays(lastDay, 1)}"]`),
+  ).not.toHaveAttribute("data-session", "true");
+});
+
 test("an imported midnight instant appears in its calendar day and no adjacent day", async ({
   student,
 }) => {
@@ -322,7 +371,44 @@ test("browser imports a file, confirms its preview and navigates calendar views"
 }) => {
   const name = `QA browser ${randomUUID().slice(0, 8)}`;
   const day = dateKey();
-  await page.goto("/calendar/integrations");
+  await page.goto("/calendar?view=week");
+  await page
+    .getByRole("button", { name: "Импорт и подписки", exact: true })
+    .click();
+  const connections = page.getByRole("dialog", {
+    name: "Импорт и подписки",
+    exact: true,
+  });
+  await expect(connections).toBeVisible();
+  await expect(connections).toHaveCSS("scrollbar-width", "none");
+  const pickEnd = connections.getByRole("button", {
+    name: "Выбрать дату «По»",
+  });
+  const datePicker = connections.getByRole("dialog", {
+    name: "Выбор даты «По»",
+  });
+  await pickEnd.click();
+  await expect(datePicker.getByRole("button", { pressed: true })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(datePicker).toBeHidden();
+  await expect(connections).toBeVisible();
+  await expect(pickEnd).toBeFocused();
+  await pickEnd.click();
+  const end = addDays(day, 7);
+  await datePicker.locator(`[data-date="${end}"]`).click();
+  await expect(
+    connections.getByRole("textbox", { name: "По", exact: true }),
+  ).toHaveValue(end.split("-").reverse().join("."));
+  const exportRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return (
+      url.pathname === "/api/calendar/export.ics" &&
+      url.searchParams.get("from") === day &&
+      url.searchParams.get("to") === addDays(end, 1)
+    );
+  });
+  await connections.getByRole("button", { name: "Скачать календарь" }).click();
+  await exportRequest;
   await page
     .getByRole("button", { name: "Импортировать", exact: true })
     .click();
@@ -333,13 +419,18 @@ test("browser imports a file, confirms its preview and navigates calendar views"
     buffer: Buffer.from(
       wrap(
         event(
-          `UID:browser\r\nDTSTART;VALUE=DATE:${day.replaceAll("-", "")}\r\nDTEND;VALUE=DATE:${addDays(day, 1).replaceAll("-", "")}\r\nSUMMARY:${name}`,
+          `UID:browser\r\nDTSTART;VALUE=DATE:${day.replaceAll("-", "")}\r\nDTEND;VALUE=DATE:${addDays(day, 1).replaceAll("-", "")}\r\nSUMMARY:${name}\r\nLOCATION:Корпус А · 405`,
         ),
       ),
     ),
   });
   await page.getByRole("button", { name: "Посмотреть перед импортом" }).click();
   const dialog = page.getByRole("dialog", { name: "Предпросмотр импорта" });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(connections).toBeVisible();
+  await page.getByRole("button", { name: "Посмотреть перед импортом" }).click();
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Подтвердить импорт" }).click();
   await expect(page.getByRole("status")).toContainText("Импорт завершён");
@@ -350,6 +441,22 @@ test("browser imports a file, confirms its preview and navigates calendar views"
     for (const view of ["day", "week", "month"]) {
       await page.goto(`/calendar?view=${view}&date=${day}`);
       await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+      const eventCard = page
+        .getByRole("button")
+        .filter({ hasText: name })
+        .first();
+      if (view === "month") {
+        await expect(eventCard).toHaveText(name);
+        expect((await eventCard.boundingBox())!.height).toBeLessThanOrEqual(24);
+        await eventCard.click();
+        await expect(
+          page.getByRole("dialog", { name, exact: true }),
+        ).toContainText("Корпус А · 405");
+        await page.keyboard.press("Escape");
+        await expect(
+          page.getByRole("dialog", { name, exact: true }),
+        ).not.toBeVisible();
+      } else await expect(eventCard).toContainText("Корпус А · 405");
     }
     await page.reload();
     await expect(page.getByText(name, { exact: true }).first()).toBeVisible();

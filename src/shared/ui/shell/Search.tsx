@@ -1,136 +1,239 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search as SearchIcon } from "lucide-react";
+import {
+  searchScopes,
+  type SearchResult,
+  type SearchScope,
+} from "@/modules/search/types";
 import { Dialog } from "../Dialog";
-import { Empty, ui } from "../primitives";
+import { ui } from "../primitives";
 import s from "./shell.module.css";
-type Item = { id: string; title: string; type: string; href: string };
+
+type ResponseState = { key: string; items: SearchResult[]; error?: string };
+
 export function Search() {
-  const [open, setOpen] = useState(false),
-    [q, setQ] = useState(""),
-    [items, setItems] = useState<Item[]>([]),
-    [active, setActive] = useState(0),
-    [error, setError] = useState("");
-  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [scope, setScope] = useState<SearchScope>("all");
+  const [response, setResponse] = useState<ResponseState | null>(null);
+  const [active, setActive] = useState<number | null>(null);
   const field = useRef<HTMLInputElement>(null);
+  const resultsArea = useRef<HTMLDivElement>(null);
+  const resultsContent = useRef<HTMLDivElement>(null);
+  const resultsId = useId();
+  const router = useRouter();
+  const term = q.trim();
+  const key = `${scope}:${term}`;
+  const current = response?.key === key ? response : null;
+  const items = current?.items ?? [];
+  const pending = term.length >= 2 && !current;
+
+  function openSearch() {
+    resultsArea.current?.style.removeProperty("height");
+    setQ("");
+    setScope("all");
+    setResponse(null);
+    setActive(null);
+    setOpen(true);
+  }
+
   useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setOpen((v) => !v);
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        if (event.repeat) return;
+        if (open) setOpen(false);
+        else openSearch();
       }
     };
-    document.addEventListener("keydown", key);
-    return () => document.removeEventListener("keydown", key);
-  }, []);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
   useEffect(() => {
-    if (!open) return;
+    if (open) field.current?.focus();
+  }, [open]);
+
+  useLayoutEffect(() => {
+    const area = resultsArea.current;
+    const content = resultsContent.current;
+    if (!open || pending || !area || !content) return;
+    const resize = () => {
+      if (content.offsetWidth) area.style.height = `${content.offsetHeight}px`;
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [open, pending]);
+
+  useEffect(() => {
+    if (!open || term.length < 2) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
+      const params = new URLSearchParams({ q: term, scope });
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+        const result = await fetch(`/api/search?${params}`, {
           signal: controller.signal,
         });
-        if (!response.ok) throw Error("Поиск временно недоступен.");
-        setItems(await response.json());
-        setActive(0);
-        setError("");
-      } catch (e) {
-        if (e instanceof Error && e.name !== "AbortError") setError(e.message);
+        if (!result.ok) throw new Error("Search failed");
+        const items: SearchResult[] = await result.json();
+        if (controller.signal.aborted) return;
+        setResponse({ key, items });
+        setActive(null);
+      } catch {
+        if (!controller.signal.aborted)
+          setResponse({ key, items: [], error: "Поиск временно недоступен." });
       }
-    }, 250);
+    }, 200);
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [q, open]);
-  const go = (item: Item) => {
+  }, [key, open, scope, term]);
+
+  const go = (item: SearchResult) => {
     setOpen(false);
     router.push(item.href);
   };
+  const optionId = (index: number) => `${resultsId}-${index}`;
+
   return (
     <>
       <button
+        type="button"
         className={s.searchButton}
-        onClick={(e) => {
-          e.currentTarget.focus();
-          setOpen(true);
+        onClick={(event) => {
+          event.currentTarget.focus();
+          openSearch();
         }}
         aria-label="Глобальный поиск"
+        aria-haspopup="dialog"
+        aria-keyshortcuts="Control+K Meta+K"
       >
-        <SearchIcon size={18} />
+        <SearchIcon size={18} aria-hidden="true" />
         <span>Найти в кабинете</span>
-        <kbd>⌘ K</kbd>
+        <kbd aria-hidden="true">⌘ K</kbd>
       </button>
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
         title="Поиск по кабинету"
+        className={s.searchDialog}
       >
-        <label>
-          Дисциплина, человек, услуга или событие
+        <div className={s.searchField}>
+          <SearchIcon size={19} aria-hidden="true" />
           <input
             ref={field}
             autoFocus
+            autoComplete="off"
+            aria-label="Поисковый запрос"
+            maxLength={80}
             value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Например, справка для работы"
+            onChange={(event) => {
+              if (event.target.value.trim() !== term) {
+                setResponse(null);
+                setActive(null);
+              }
+              setQ(event.target.value);
+            }}
+            placeholder="Введите запрос"
             role="combobox"
-            aria-controls="global-results"
+            aria-autocomplete="list"
+            aria-controls={resultsId}
             aria-expanded={items.length > 0}
             aria-activedescendant={
-              items[active] ? `search-${active}` : undefined
+              active !== null && items[active] ? optionId(active) : undefined
             }
-            onKeyDown={(e) => {
-              if (e.key === "ArrowDown") {
-                e.preventDefault();
-                setActive((v) => Math.min(items.length - 1, v + 1));
+            onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing || !items.length) return;
+              if (event.key === "Enter") {
+                event.preventDefault();
+                go(items[active ?? 0]);
               }
-              if (e.key === "ArrowUp") {
-                e.preventDefault();
-                setActive((v) => Math.max(0, v - 1));
-              }
-              if (e.key === "Enter" && items[active]) {
-                e.preventDefault();
-                go(items[active]);
+              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                event.preventDefault();
+                const next =
+                  event.key === "ArrowDown"
+                    ? Math.min(items.length - 1, (active ?? -1) + 1)
+                    : Math.max(0, (active ?? items.length) - 1);
+                setActive(next);
+                document
+                  .getElementById(optionId(next))
+                  ?.scrollIntoView({ block: "nearest" });
               }
             }}
           />
-        </label>
-        {error && (
-          <p role="alert" className={ui.error}>
-            {error}
-          </p>
-        )}
-        <div id="global-results" role="listbox" className={s.searchResults}>
-          {items.map((item, i) => (
-            <div key={`${item.type}-${item.id}`}>
-              {items[i - 1]?.type !== item.type && (
-                <div className={s.searchGroup}>{item.type}</div>
-              )}
-              <div
-                id={`search-${i}`}
-                role="option"
-                aria-selected={i === active}
-                className={s.result}
-                onMouseMove={() => setActive(i)}
-                onClick={() => go(item)}
-              >
-                {item.title}
-              </div>
-            </div>
+        </div>
+        <div
+          className={s.searchScopes}
+          role="group"
+          aria-label="Искать в разделе"
+        >
+          {searchScopes.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={scope === id}
+              onClick={() => {
+                if (scope === id) return;
+                setScope(id);
+                setResponse(null);
+                setActive(null);
+              }}
+            >
+              {label}
+            </button>
           ))}
-          {items.length === 0 && (
-            <Empty
-              title={q.length < 2 ? "Что ищем?" : "Ничего не найдено"}
-              description={
-                q.length < 2
+        </div>
+        <div className={s.searchResultsArea} ref={resultsArea}>
+          <div ref={resultsContent}>
+            <div
+              id={resultsId}
+              role="listbox"
+              aria-label="Результаты поиска"
+              className={s.searchResults}
+              hidden={!items.length}
+              onPointerMove={() => {
+                if (active !== null) setActive(null);
+              }}
+            >
+              {items.map((item, index) => (
+                <div
+                  key={`${item.type}-${item.id}`}
+                  id={optionId(index)}
+                  role="option"
+                  aria-selected={index === active}
+                  className={s.result}
+                  onClick={() => go(item)}
+                >
+                  <span>{item.title}</span>
+                  <small>{item.type}</small>
+                </div>
+              ))}
+            </div>
+            {current?.error ? (
+              <p role="alert" className={`${s.searchStatus} ${ui.error}`}>
+                {current.error}
+              </p>
+            ) : (
+              <p
+                role="status"
+                className={items.length ? ui.srOnly : s.searchStatus}
+              >
+                {term.length < 2
                   ? "Введите хотя бы два символа."
-                  : "Попробуйте другое название или назначение."
-              }
-            />
-          )}
+                  : pending
+                    ? "Ищем…"
+                    : items.length
+                      ? `Найдено: ${items.length}`
+                      : "Ничего не найдено. Попробуйте другой запрос или раздел."}
+              </p>
+            )}
+          </div>
         </div>
       </Dialog>
     </>

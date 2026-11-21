@@ -651,6 +651,8 @@ model CommunityEvent {
   description          String
   organizer            String
   location             String
+  city                 String       @default("Москва")
+  cover                String?
   startsAt             DateTime
   endsAt               DateTime
   registrationDeadline DateTime?
@@ -679,6 +681,9 @@ model NewsPost {
   title       String
   body        String
   author      String
+  city        String   @default("Москва")
+  category    String   @default("Университет")
+  cover       String?
   groupId     String?
   publishedAt DateTime
 }

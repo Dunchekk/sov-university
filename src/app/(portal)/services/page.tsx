@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { pageStudent } from "@/server/access";
 import { db } from "@/server/db";
 import {
@@ -76,7 +76,7 @@ export default async function ServicesPage({
                   ? `/services/${r.service.slug}?draft=${r.id}`
                   : `/requests/${r.id}`
               }
-              className={`${ui.between} ${ui.listItem}`}
+              className={`${ui.between} ${ui.listLink}`}
             >
               <div>
                 <h3>{r.service.title}</h3>
@@ -96,7 +96,6 @@ export default async function ServicesPage({
               >
                 {statusLabel(r.status)}
               </Badge>
-              <ArrowUpRight size={17} />
             </Link>
           ))}
           {!requests.length && (
@@ -126,7 +125,7 @@ export default async function ServicesPage({
         </Card>
       ) : (
         <div className={ui.stack}>
-          <form className={ui.row}>
+          <form className={ui.filterBar}>
             <label>
               Что нужно?
               <input

@@ -106,7 +106,7 @@ export function SectionTitle({
   href,
   label = "Все",
 }: {
-  title: string;
+  title: ReactNode;
   href?: string;
   label?: string;
 }) {

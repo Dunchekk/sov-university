@@ -1,17 +1,12 @@
 import Link from "next/link";
-import { BookOpen, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { pageStudent } from "@/server/access";
 import { myCourses } from "@/modules/courses/service";
 import { AttendanceIndicator } from "@/modules/assessment/AttendanceIndicator";
-import {
-  Card,
-  PageTitle,
-  Tabs,
-  Badge,
-  Empty,
-  ui,
-} from "@/shared/ui/primitives";
+import { Card, PageTitle, Tabs, Empty, ui } from "@/shared/ui/primitives";
 import { formatDate } from "@/shared/lib/time";
+import s from "./courses.module.css";
+
 export default async function CoursesPage({
   searchParams,
 }: {
@@ -20,18 +15,24 @@ export default async function CoursesPage({
   const student = await pageStudent();
   const params = await searchParams;
   const semester = params.semester === "past" ? "past" : "current";
-  const all = await myCourses(student);
-  const courses = all.filter(
-    (r) =>
-      (semester === "past"
-        ? r.enrollment.status === "COMPLETED"
-        : r.enrollment.status !== "COMPLETED") &&
-      r.enrollment.course.name
-        .toLowerCase()
-        .includes((params.q ?? "").toLowerCase()),
+  const past = semester === "past";
+  const enrolled = await myCourses(student, {
+    status: past ? "COMPLETED" : { not: "COMPLETED" },
+  });
+  const query = (params.q ?? "").toLowerCase();
+  const courses = enrolled.filter(({ enrollment }) =>
+    enrollment.course.name.toLowerCase().includes(query),
   );
+  const plural = new Intl.PluralRules("ru").select(courses.length);
+  const countLabel =
+    plural === "one"
+      ? "дисциплина"
+      : plural === "few"
+        ? "дисциплины"
+        : "дисциплин";
+  const now = new Date();
   return (
-    <>
+    <div className={s.courses}>
       <PageTitle
         title="Дисциплины"
         description={`${student.group.program.name} · ${student.group.name}`}
@@ -47,7 +48,7 @@ export default async function CoursesPage({
           },
         ]}
       />
-      <form className={ui.row}>
+      <form className={ui.filterBar}>
         <input type="hidden" name="semester" value={semester} />
         <label className={ui.form}>
           Поиск дисциплины
@@ -60,39 +61,42 @@ export default async function CoursesPage({
         <button className={ui.button}>Найти</button>
       </form>
       <div className={ui.stack}>
-        <p className={ui.caption}>{courses.length} дисциплин</p>
+        <p className={ui.caption}>
+          {courses.length} {countLabel}
+        </p>
         <div className={ui.grid2}>
           {courses.map((r) => {
-            const course = r.enrollment.course;
-            const next = r.assessments.find((a) => a.dueAt > new Date());
+            const { course, officialGrade } = r.enrollment;
+            const next = r.assessments.find((a) => a.dueAt > now);
             return (
-              <Card key={course.id}>
-                <div className={ui.stack}>
-                  <div className={ui.between}>
-                    <Badge>{course.assessmentType}</Badge>
-                    <BookOpen size={19} className={ui.muted} />
-                  </div>
+              <Card className={s.courseCard} key={course.id}>
+                <div>
+                  <Link
+                    href={`/studies/courses/${course.id}`}
+                    className={s.courseTitle}
+                  >
+                    <h2>{course.name}</h2>
+                    <ArrowUpRight size={18} aria-hidden="true" />
+                  </Link>
+                  <p className={ui.caption}>
+                    {course.lecturer.name}
+                    {past && ` · ${course.semester} семестр`}
+                  </p>
+                </div>
+                <div className={`${ui.between} ${s.courseMetrics}`}>
                   <div>
-                    <Link
-                      href={`/studies/courses/${course.id}`}
-                      className={ui.between}
-                    >
-                      <h2>{course.name}</h2>
-                      <ArrowUpRight size={18} />
-                    </Link>
-                    <p className={ui.caption}>{course.lecturer.name}</p>
+                    <span className={ui.caption}>
+                      {past && officialGrade ? "Итоговая оценка" : "Результат"}
+                    </span>
+                    <p>
+                      <strong>
+                        {officialGrade
+                          ? `${officialGrade} / 10`
+                          : `${r.grade.points} / ${r.grade.maximum} баллов`}
+                      </strong>
+                    </p>
                   </div>
-                  <div className={ui.between}>
-                    <div>
-                      <span className={ui.caption}>Результат</span>
-                      <p>
-                        <strong>
-                          {r.enrollment.officialGrade
-                            ? `${r.enrollment.officialGrade} / 10`
-                            : `${r.grade.points} / ${r.grade.maximum} баллов`}
-                        </strong>
-                      </p>
-                    </div>
+                  {(!past || r.attendance.percentage !== null) && (
                     <div>
                       <span className={ui.caption}>Посещаемость</span>
                       <AttendanceIndicator
@@ -100,19 +104,21 @@ export default async function CoursesPage({
                         scheme={r.scheme}
                       />
                     </div>
-                  </div>
+                  )}
+                </div>
+                {r.grade.maximum > 0 && (
                   <progress
-                    className={ui.progress}
+                    className={`${ui.progress} ${s.courseProgress}`}
                     value={r.grade.points}
                     max={r.grade.maximum}
                     aria-label={`Баллы: ${course.name}`}
                   />
+                )}
+                {next && (
                   <p className={ui.caption}>
-                    {next
-                      ? `Далее: ${next.title} · ${formatDate(next.dueAt)}`
-                      : "Учебный период завершён"}
+                    Далее: {next.title} · {formatDate(next.dueAt)}
                   </p>
-                </div>
+                )}
               </Card>
             );
           })}
@@ -124,6 +130,6 @@ export default async function CoursesPage({
           />
         )}
       </div>
-    </>
+    </div>
   );
 }

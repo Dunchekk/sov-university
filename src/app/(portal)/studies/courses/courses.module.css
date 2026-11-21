@@ -1,0 +1,33 @@
+.courses button,
+.courses nav a[aria-current="page"] {
+  font-weight: var(--weight-regular);
+}
+
+.courses .courseCard {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+}
+
+.courseTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.courseTitle svg {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+  flex-shrink: 0;
+}
+
+.courses .courseMetrics {
+  align-items: flex-start;
+  gap: var(--space-2) var(--space-4);
+}
+
+.courseProgress {
+  --accent: light-dark(#2978e8, #79adff);
+}

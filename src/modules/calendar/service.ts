@@ -6,6 +6,7 @@ import { dayStart, addDays, dateKey, TIMEZONE } from "@/shared/lib/time";
 import {
   eventTypes,
   type CalendarEvent,
+  type ExamPeriod,
   type ScheduleSelection,
 } from "./types";
 import type { Prisma } from "@/generated/prisma/client";
@@ -52,6 +53,28 @@ export function parseCalendarQuery(params: URLSearchParams): CalendarQuery {
         return { kind, id } as ScheduleSelection;
       }),
     finance: params.get("finance") === "true",
+  };
+}
+export async function calendarExamPeriod(
+  student: Pick<StudentContext, "id" | "groupId" | "currentSemester">,
+): Promise<ExamPeriod | null> {
+  const { _min, _max } = await db.lesson.aggregate({
+    where: {
+      groupId: student.groupId,
+      kind: "Экзамен",
+      cancelled: false,
+      course: {
+        semester: student.currentSemester,
+        enrollments: { some: { studentId: student.id } },
+      },
+    },
+    _min: { startsAt: true },
+    _max: { startsAt: true },
+  });
+  if (!_min.startsAt || !_max.startsAt) return null;
+  return {
+    from: dateKey(_min.startsAt),
+    to: addDays(dateKey(_max.startsAt), 1),
   };
 }
 export async function calendarEvents(
@@ -246,10 +269,12 @@ export async function calendarEvents(
       startsAt: lesson.startsAt.toISOString(),
       endsAt: lesson.endsAt.toISOString(),
       timezone: lesson.timezone,
+      room: lesson.room?.name,
       location: lesson.room
         ? `${lesson.room.building} · ${lesson.room.name}. ${lesson.room.address}. ${lesson.room.directions}`
         : "Онлайн",
       lecturer: lesson.lecturer.name,
+      lecturerId: lesson.lecturerId,
       group: lesson.group.name,
       courseId: ownCourses.has(lesson.courseId) ? lesson.courseId : undefined,
       href: ownCourses.has(lesson.courseId)

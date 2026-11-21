@@ -1,5 +1,5 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -12,7 +12,6 @@ import {
   Compass,
   LifeBuoy,
   Settings,
-  Bell,
   PanelLeftClose,
   PanelLeftOpen,
   ChevronDown,
@@ -20,7 +19,10 @@ import {
   X,
 } from "lucide-react";
 import { Avatar, Button } from "../primitives";
+import { PageContainer } from "../PageContainer";
 import { Search } from "./Search";
+import { NotificationPopover } from "./NotificationPopover";
+import { Breadcrumbs, BreadcrumbTrail } from "./Breadcrumbs";
 import { brand } from "@/shared/config/brand";
 import { api } from "@/shared/lib/client";
 import s from "./shell.module.css";
@@ -36,9 +38,16 @@ const nav = [
   { href: "/calendar", label: "Календарь", icon: CalendarDays },
   { href: "/services", label: "Справки и заявления", icon: Files },
   { href: "/finance", label: "Финансы", icon: Wallet },
-  { href: "/community", label: "События и новости", icon: Compass },
+  { href: "/community", label: "События", icon: Compass },
   { href: "/people", label: "Люди", icon: Users },
 ];
+const secondaryLabels: Record<string, string> = {
+  "/profile": "Профиль",
+  "/settings": "Настройки",
+  "/notifications": "Уведомления",
+  "/support": "Поддержка",
+  "/requests": "Мои обращения",
+};
 export function Shell({
   name,
   group,
@@ -58,17 +67,14 @@ export function Shell({
     [expanded, setExpanded] = useState(true),
     [error, setError] = useState("");
   const active = (href: string) =>
-    href === "/" ? path === "/" : path.startsWith(href);
-  const title =
-    study.find(([href]) => active(href))?.[1] ??
-    nav.find((n) => active(n.href))?.label ??
-    (path === "/profile"
-      ? "Профиль"
-      : path === "/settings"
-        ? "Настройки"
-        : path === "/notifications"
-          ? "Уведомления"
-          : "Личный кабинет");
+    path === href || (href !== "/" && path.startsWith(`${href}/`));
+  const studySection = study.find(([href]) => active(href));
+  const section = studySection
+    ? { href: studySection[0], label: studySection[1] }
+    : (nav.find((n) => active(n.href)) ?? {
+        href: path,
+        label: secondaryLabels[path] ?? "Личный кабинет",
+      });
   const item = (href: string, label: string, Icon: typeof House) => (
     <Link
       href={href}
@@ -177,24 +183,22 @@ export function Shell({
           >
             {mobile ? <X size={19} /> : <Menu size={19} />}
           </Button>
-          <span className={s.breadcrumb}>
-            Личный кабинет <span aria-hidden> / </span> {title}
-          </span>
+          <Suspense
+            fallback={
+              <BreadcrumbTrail
+                parent={{ href: "/", label: "Личный кабинет" }}
+                title={section.label}
+              />
+            }
+          >
+            <Breadcrumbs path={path} section={section} />
+          </Suspense>
           <div className={s.headerActions}>
             <Search />
-            <Link
-              href="/notifications"
-              className={s.bell}
-              aria-label={`Уведомления${unread ? `, непрочитанных: ${unread}` : ""}`}
-            >
-              <Bell size={18} />
-              {unread > 0 && <span className={s.dot} />}
-            </Link>
+            <NotificationPopover key={path} unread={unread} />
           </div>
         </header>
-        <main id="main" className={s.content}>
-          {children}
-        </main>
+        <PageContainer>{children}</PageContainer>
       </div>
     </div>
   );

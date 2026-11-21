@@ -34,7 +34,7 @@ export default async function AchievementsPage({
           </Link>
         }
       />
-      <form className={ui.row}>
+      <form className={ui.filterBar}>
         <label>
           Категория
           <select name="category" defaultValue={p.category ?? ""}>

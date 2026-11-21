@@ -1,5 +1,7 @@
 import "dotenv/config";
 import { academicExtras } from "./academic-extras";
+import { seedCommunity } from "./seed-community";
+import { seedCompletedCourses } from "./seed-completed-courses";
 import { seedCourseMaterials } from "./seed-course-materials";
 import { db } from "../src/server/db";
 import { hashPassword } from "../src/server/password";
@@ -11,15 +13,40 @@ import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Prisma } from "../src/generated/prisma/client";
 
+const demoLecturers = [
+  ["Анна Воронцова", "Анна Сергеевна Воронцова"],
+  ["Дмитрий Лебедев", "Дмитрий Андреевич Лебедев"],
+  ["Елена Белова", "Елена Викторовна Белова"],
+  ["Илья Новиков", "Илья Александрович Новиков"],
+  ["Ольга Крылова", "Ольга Михайловна Крылова"],
+  ["Артём Волков", "Артём Павлович Волков"],
+  ["Мария Лазарева", "Мария Алексеевна Лазарева"],
+  ["Павел Орлов", "Павел Николаевич Орлов"],
+] as const;
+
 async function main() {
+  // Add patronymics to existing demo profiles without overwriting custom names.
+  await db.$transaction(
+    demoLecturers.map(([previousName, name], i) =>
+      db.person.updateMany({
+        where: {
+          id: `lecturer-${i}`,
+          email: `lecturer${i + 1}@example.org`,
+          name: previousName,
+        },
+        data: { name },
+      }),
+    ),
+  );
+  const base = process.env.DEMO_BASE_DATE || dateKey();
   if (
     !process.env.REGENERATE_DEMO_FILES &&
     (await db.seedRun.findUnique({ where: { id: "v1" } }))
   ) {
+    await seedCommunity(base);
     console.log("Demo уже загружено; изменения сохранены.");
     return;
   }
-  const base = process.env.DEMO_BASE_DATE || dateKey();
   const day = (n: number, time = "10:00") => atTime(addDays(base, n), time);
   const credentialsPath =
     process.env.DEMO_CREDENTIALS_FILE ?? ".local/demo-credentials.json";
@@ -182,23 +209,13 @@ async function main() {
       },
     });
   }
-  const lecturerNames = [
-    "Анна Воронцова",
-    "Дмитрий Лебедев",
-    "Елена Белова",
-    "Илья Новиков",
-    "Ольга Крылова",
-    "Артём Волков",
-    "Мария Лазарева",
-    "Павел Орлов",
-  ];
-  for (let i = 0; i < lecturerNames.length; i++)
+  for (const [i, [, name]] of demoLecturers.entries())
     await db.person.upsert({
       where: { id: `lecturer-${i}` },
       update: {},
       create: {
         id: `lecturer-${i}`,
-        name: lecturerNames[i],
+        name,
         department:
           i < 4
             ? "Кафедра цифровых продуктов"
@@ -867,64 +884,7 @@ async function main() {
     ],
     { studentId: "student-b", contractId: "contract-b", purpose: "CONTRACT" },
   );
-  const eventNames = [
-    "Открытая мастерская интерфейсов",
-    "Научный вечер: данные и город",
-    "Волонтёрская суббота",
-    "Разговор о карьере в дизайне",
-    "Книжный клуб: цифровая культура",
-    "Турнир студенческих команд",
-    "Выставка «Точка зрения»",
-    "День открытых лабораторий",
-  ];
-  for (let i = 0; i < 8; i++) {
-    await db.communityEvent.upsert({
-      where: { id: `event-${i}` },
-      update: {},
-      create: {
-        id: `event-${i}`,
-        title: eventNames[i],
-        category: [
-          "Творчество",
-          "Наука",
-          "Волонтёрство",
-          "Карьера",
-          "Культура",
-          "Спорт",
-          "Творчество",
-          "Наука",
-        ][i],
-        description:
-          "Встреча университетского сообщества: знакомимся с идеями, обсуждаем опыт и пробуем новое. Сохранение в календарь не является регистрацией.",
-        organizer: "Студенческий центр",
-        location: i % 2 ? "Корпус Б, пространство 2" : "Корпус А, атриум",
-        startsAt: day(2 + i * 2, "18:00"),
-        endsAt: day(2 + i * 2, "20:00"),
-        groupId: i === 7 ? "p-22" : null,
-      },
-    });
-    await db.newsPost.upsert({
-      where: { id: `news-${i}` },
-      update: {},
-      create: {
-        id: `news-${i}`,
-        title: [
-          "Открыт приём стипендиальных заявок",
-          "Библиотека продлевает часы работы",
-          "Новые материалы для учебных проектов",
-          "Итоги осенней школы",
-          "Консультации учебного офиса",
-          "Изменения в расписании лабораторий",
-          "Студенческие инициативы месяца",
-          "Встреча кураторов программ",
-        ][i],
-        body: "Информация университетского сообщества. Подробности можно уточнить в соответствующем подразделении через справочник или личное обращение.",
-        author: i % 2 ? "Студенческий центр" : "Учебный офис",
-        groupId: i === 7 ? "p-22" : null,
-        publishedAt: day(-i),
-      },
-    });
-  }
+  await seedCommunity(base);
   await db.savedEvent.upsert({
     where: {
       studentId_eventId: { studentId: "student-a", eventId: "event-0" },
@@ -998,6 +958,7 @@ async function main() {
 }
 main()
   .then(academicExtras)
+  .then(seedCompletedCourses)
   .then(seedCourseMaterials)
   .then(async () => {
     const items = await db.achievement.findMany({

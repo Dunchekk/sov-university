@@ -53,6 +53,12 @@ body {
   min-height: 100%;
   max-width: 100%;
 }
+html {
+  scrollbar-gutter: stable;
+}
+html:has(dialog[open]) {
+  overflow: hidden;
+}
 body {
   background: var(--bg-page);
   color: var(--text-primary);
@@ -84,6 +90,7 @@ button:disabled {
 a {
   color: inherit;
   text-decoration: none;
+  transition: color var(--motion);
 }
 a:hover {
   color: var(--accent);
@@ -120,12 +127,124 @@ input,
 textarea,
 select {
   min-width: 0;
-  background: var(--bg-surface);
+  background: var(--bg-subtle);
   color: var(--text-primary);
-  border: 1px solid var(--border-control);
+  border: 1px solid transparent;
   border-radius: var(--radius-control);
-  padding: var(--space-3);
+  min-height: var(--control-height);
+  padding: 9px var(--space-3);
   width: 100%;
+  line-height: 22px;
+  transition:
+    border-color var(--motion),
+    background-color var(--motion),
+    box-shadow var(--motion);
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+input:hover:where(:not(:disabled):not(:read-only)),
+textarea:hover:where(:not(:disabled):not(:read-only)),
+select:hover:where(:not(:disabled)) {
+  background-color: var(--bg-hover);
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  background-color: var(--bg-control-focus);
+  border-color: transparent;
+  outline: none;
+  box-shadow: none;
+}
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background-color: var(--bg-subtle);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+select[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+input[aria-invalid="true"]:focus-visible,
+textarea[aria-invalid="true"]:focus-visible,
+select[aria-invalid="true"]:focus-visible {
+  background-color: var(--danger-soft);
+  box-shadow: none;
+  border-color: var(--danger);
+}
+select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23707279' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  text-overflow: ellipsis;
+}
+/* Keep native form/keyboard semantics; style the popup where supported. */
+@supports (appearance: base-select) {
+  select,
+  select::picker(select) {
+    appearance: base-select;
+  }
+  select {
+    background-image: none;
+    padding-right: var(--space-3);
+    align-items: center;
+    gap: var(--space-3);
+  }
+  select::picker-icon {
+    color: var(--text-muted);
+    width: 12px;
+    height: 12px;
+    font-size: 0;
+    background: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    transition: transform var(--motion);
+  }
+  select:open::picker-icon {
+    transform: rotate(180deg);
+  }
+  select::picker(select) {
+    margin-block: 6px;
+    padding: var(--space-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-control);
+    background: var(--bg-surface-raised);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-menu);
+    max-height: min(320px, 60vh);
+    overflow-y: auto;
+  }
+  select option {
+    min-height: 36px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color var(--motion);
+  }
+  select option:checked {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: var(--weight-medium);
+  }
+  select option:hover,
+  select option:focus-visible {
+    background: var(--bg-hover);
+    outline: none;
+  }
+  select option::checkmark {
+    margin-left: auto;
+    order: 1;
+    color: var(--accent);
+  }
 }
 textarea {
   min-height: 112px;
@@ -133,13 +252,115 @@ textarea {
 }
 input[type="checkbox"],
 input[type="radio"] {
-  width: auto;
-  accent-color: var(--accent);
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  border-radius: 5px;
+  border-color: var(--text-muted);
+  background-color: var(--bg-surface);
+  cursor: pointer;
+  vertical-align: middle;
+}
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+input[type="checkbox"]::before,
+input[type="radio"]::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: var(--primary-fg);
+  opacity: 0;
+  transform: scale(0.65);
+  transition:
+    opacity var(--motion),
+    transform var(--motion) var(--ease-out);
+}
+input[type="checkbox"]::before {
+  clip-path: polygon(5% 45%, 20% 30%, 42% 53%, 82% 12%, 98% 27%, 42% 85%);
+}
+input[type="checkbox"]:checked,
+input[type="checkbox"]:indeterminate,
+input[type="radio"]:checked {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+}
+input[type="checkbox"]:checked::before,
+input[type="checkbox"]:indeterminate::before,
+input[type="radio"]:checked::before {
+  opacity: 1;
+  transform: scale(1);
+}
+input[type="checkbox"]:indeterminate::before {
+  clip-path: inset(40% 0 round 1px);
+}
+input[type="radio"],
+input[type="radio"]::before {
+  border-radius: 50%;
+}
+input[type="radio"]::before {
+  width: 6px;
+  height: 6px;
+}
+input[type="checkbox"]:disabled,
+input[type="radio"]:disabled {
+  cursor: not-allowed;
+}
+input[type="file"] {
+  padding: var(--space-2);
+  border-style: dashed;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+input[type="file"]::file-selector-button {
+  font: inherit;
+  font-weight: var(--weight-medium);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 6px var(--space-3);
+  margin-right: var(--space-3);
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+  cursor: pointer;
+  transition: background-color var(--motion);
+}
+input[type="file"]:hover:not(:disabled)::file-selector-button {
+  background: var(--bg-hover);
+}
+input::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity var(--motion);
+}
+input:hover::-webkit-calendar-picker-indicator {
+  opacity: 1;
 }
 label {
   display: grid;
   gap: var(--space-2);
   font-weight: var(--weight-medium);
+  font-size: var(--text-sm);
+  min-width: 0;
+}
+label:has(> input:is([type="checkbox"], [type="radio"])) {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+  min-height: 32px;
+  font-weight: var(--weight-regular);
+  cursor: pointer;
+}
+label:has(> input:disabled) {
+  cursor: not-allowed;
 }
 :focus-visible {
   outline: 2px solid var(--focus-ring);
@@ -168,9 +389,32 @@ th {
 }
 summary {
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  list-style: none;
+  font-weight: var(--weight-medium);
 }
-summary::marker {
-  color: var(--text-muted);
+summary::-webkit-details-marker {
+  display: none;
+}
+summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-right: 1.5px solid var(--text-muted);
+  border-bottom: 1.5px solid var(--text-muted);
+  transform: rotate(45deg);
+  margin-right: var(--space-1);
+  transition: transform var(--motion) var(--ease-out);
+}
+details[open] > summary::after {
+  transform: rotate(225deg);
+}
+details[open] > summary {
+  margin-bottom: var(--space-3);
 }
 hr {
   border: 0;
@@ -185,8 +429,25 @@ small {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+@media (forced-colors: active) {
+  input[type="checkbox"],
+  input[type="radio"] {
+    appearance: auto;
+  }
+  input[type="checkbox"]::before,
+  input[type="radio"]::before {
+    display: none;
+  }
+  :focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid Highlight;
   }
 }
 @media (max-width: 600px) {

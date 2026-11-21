@@ -12,23 +12,34 @@
   font-weight: var(--weight-medium);
   font-size: var(--text-sm);
   transition:
-    background var(--motion),
-    border-color var(--motion);
+    background-color var(--motion),
+    border-color var(--motion),
+    color var(--motion),
+    opacity var(--motion),
+    transform var(--motion) var(--ease-out);
   white-space: nowrap;
 }
-.button:hover {
+.button:hover:not(:disabled) {
   background: var(--bg-hover);
   color: var(--text-primary);
+}
+.button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 .primary {
   background: var(--primary-bg);
   color: var(--primary-fg);
   border-color: var(--primary-bg);
 }
-.primary:hover {
+.primary:hover:not(:disabled) {
   opacity: 0.85;
   background: var(--primary-bg);
   color: var(--primary-fg);
+}
+.danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 .danger {
   background: var(--danger-soft);
@@ -41,14 +52,19 @@
 }
 .icon {
   width: var(--control-height);
+  flex-shrink: 0;
   padding: var(--space-2);
 }
 .card {
-  border: 1px solid var(--border-subtle);
+  --bg-subtle: var(--bg-card-inset);
   border-radius: var(--radius-card);
-  background: var(--bg-surface);
+  background: var(--bg-card);
   padding: var(--space-6);
   min-width: 0;
+}
+.card .card {
+  --bg-subtle: var(--bg-card);
+  background: var(--bg-card-inset);
 }
 .stack {
   display: flex;
@@ -62,6 +78,46 @@
   gap: var(--space-3);
   flex-wrap: wrap;
   min-width: 0;
+}
+.filterBar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+.filterBar > label {
+  flex: 0 1 240px;
+  max-width: 100%;
+}
+.filterBar > label:has(input[type="checkbox"]) {
+  flex-basis: auto;
+  min-height: var(--control-height);
+}
+.stack > .filterBar {
+  margin-bottom: 0;
+}
+.field {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.checkField {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  min-height: 32px;
+}
+.checkField > input {
+  order: -1;
+}
+.checkField > label {
+  cursor: pointer;
+  flex: 1;
+}
+.checkField > .fieldError {
+  flex-basis: 100%;
 }
 .between {
   display: flex;
@@ -122,16 +178,22 @@
   white-space: nowrap;
 }
 .warning {
-  background: var(--warning-soft);
   color: var(--warning);
 }
+.warning:where(.badge, .alert) {
+  background: var(--warning-soft);
+}
 .success {
-  background: var(--success-soft);
   color: var(--success);
 }
+.success:where(.badge, .alert, [role="status"]) {
+  background: var(--success-soft);
+}
 .info {
-  background: var(--accent-soft);
   color: var(--accent);
+}
+.info:where(.badge, .alert, [role="status"]) {
+  background: var(--accent-soft);
 }
 .alert {
   padding: var(--space-4);
@@ -141,10 +203,20 @@
   display: flex;
   gap: var(--space-3);
   align-items: flex-start;
+  animation: appear var(--motion-enter) var(--ease-out);
 }
 .error {
-  background: var(--danger-soft);
   color: var(--danger);
+}
+.error:where(.badge, .alert, [role="alert"]) {
+  background: var(--danger-soft);
+}
+.error[role="alert"],
+.success[role="status"],
+.info[role="status"] {
+  padding: var(--space-4);
+  border-radius: var(--radius-control);
+  font-size: var(--text-sm);
 }
 .empty {
   text-align: center;
@@ -169,6 +241,13 @@
   border: 0;
   background: none;
   font-weight: var(--weight-regular);
+  transition:
+    background-color var(--motion),
+    color var(--motion);
+}
+.tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 .tab[aria-current="page"],
 .tab[aria-selected="true"] {
@@ -205,12 +284,38 @@
   background: var(--accent);
   border-radius: var(--radius-pill);
 }
+.progress::-moz-progress-bar {
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+}
 .listItem {
   padding: var(--space-4) 0;
   border-bottom: 1px solid var(--border-subtle);
 }
 .listItem:last-child {
   border-bottom: 0;
+}
+.listLink {
+  position: relative;
+  margin-inline: calc(-1 * var(--space-2));
+  padding: var(--space-4) var(--space-2);
+  border-radius: var(--radius-control);
+  transition: background-color var(--motion);
+}
+.listLink:hover {
+  background-color: color-mix(in srgb, var(--bg-subtle) 60%, var(--bg-card));
+  color: inherit;
+}
+.listLink + .listLink {
+  margin-block-start: 1px;
+}
+.listLink + .listLink::before {
+  content: "";
+  position: absolute;
+  inset-block-start: -1px;
+  inset-inline: var(--space-2);
+  border-block-start: 1px solid var(--border-subtle);
+  pointer-events: none;
 }
 .avatar {
   display: inline-flex;
@@ -236,24 +341,92 @@
   background: var(--bg-surface-raised);
   color: var(--text-primary);
   width: min(620px, calc(100vw - 32px));
-  max-height: 85vh;
+  max-height: min(85dvh, calc(100dvh - 32px));
   box-shadow: var(--shadow-menu);
+  overscroll-behavior: contain;
+}
+.dialog[open] {
+  animation: enter var(--motion-enter) var(--ease-out);
+}
+.dialog[open][data-closing] {
+  animation: dialogExit 160ms ease-in forwards;
+  pointer-events: none;
+  overflow: hidden;
+}
+.dialog[data-closing]::backdrop {
+  animation: backdropExit 160ms ease-in forwards;
 }
 .dialog::backdrop {
   background: var(--overlay);
+  animation: appear var(--motion-enter) var(--ease-out);
 }
 .dialogBody {
   padding: var(--space-6);
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-3);
+}
+.dialogBody :is(.stack, .form, .fieldset) {
+  gap: var(--space-3);
+}
+.dialogBody textarea {
+  max-height: min(240px, 40dvh);
+}
+.dialogBody > .between {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+.dialogBody > .between h2 {
+  padding-block: var(--space-2);
 }
 .details {
   padding: var(--space-4);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
+  transition:
+    border-color var(--motion),
+    background-color var(--motion);
+}
+.details:hover {
+  border-color: var(--border-control);
 }
 .details[open] > summary {
   margin-bottom: var(--space-4);
+}
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes dialogExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes backdropExit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 .skeleton {
   height: 180px;
@@ -297,6 +470,12 @@
   .button {
     white-space: normal;
   }
+  .filterBar {
+    gap: var(--space-3);
+  }
+  .filterBar > label {
+    flex-basis: 100%;
+  }
 }
 
 .fieldset {
@@ -306,4 +485,10 @@
   padding: 0;
   margin: 0;
   min-width: 0;
+}
+.fieldset > legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
 }

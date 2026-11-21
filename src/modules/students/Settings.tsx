@@ -25,14 +25,7 @@ export function Settings({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   useEffect(() => {
-    const media = matchMedia("(prefers-color-scheme:dark)");
-    const apply = () => {
-      document.documentElement.dataset.theme =
-        theme === "system" ? (media.matches ? "dark" : "light") : theme;
-    };
-    apply();
-    media.addEventListener("change", apply);
-    return () => media.removeEventListener("change", apply);
+    document.documentElement.dataset.theme = theme;
   }, [theme]);
   const save = async (values: Record<string, unknown>) => {
     setBusy(true);
@@ -177,12 +170,12 @@ export function Settings({
         </div>
       </Card>
       {message && (
-        <p role="status" className={ui.success}>
+        <p role="status" className={`${ui.alert} ${ui.success}`}>
           {message}
         </p>
       )}
       {error && (
-        <p role="alert" className={ui.error}>
+        <p role="alert" className={`${ui.alert} ${ui.error}`}>
           {error}
         </p>
       )}

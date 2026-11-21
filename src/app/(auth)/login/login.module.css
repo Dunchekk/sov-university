@@ -48,7 +48,7 @@
 }
 .form {
   width: 100%;
-  max-width: 380px;
+  max-width: 428px;
   display: grid;
   gap: var(--space-6);
 }
@@ -86,8 +86,5 @@
   .formSide {
     padding: var(--space-6);
     align-items: flex-start;
-  }
-  .form {
-    padding-top: var(--space-8);
   }
 }

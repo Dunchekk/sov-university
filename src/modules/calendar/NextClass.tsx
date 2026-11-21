@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MapPin, Clock3, ArrowUpRight } from "lucide-react";
-import { Badge, ui } from "@/shared/ui/primitives";
+import { MapPin, Clock3, Flame } from "lucide-react";
+import { ui } from "@/shared/ui/primitives";
 import { nextClasses, eventDate } from "./layout";
 import { formatDate, formatTime, dateKey, addDays } from "@/shared/lib/time";
 import type { CalendarEvent } from "./types";
@@ -27,15 +27,11 @@ export function NextClass({
   const { current, next } = nextClasses(events, new Date(time));
   const list = current.length ? current : next;
   return (
-    <section className={`${ui.card} ${s.nextCard}`}>
-      <div className={ui.between}>
-        <span className={ui.eyebrow}>
-          {current.length ? "Сейчас идёт" : "Следующая пара"}
-        </span>
-        <Badge tone="info">
-          {current.length ? "В процессе" : "По расписанию"}
-        </Badge>
-      </div>
+    <section className={s.nextClass}>
+      <h2 className={s.nextStatus}>
+        {current.length ? "Сейчас идёт" : "Следующая пара"}
+        {current.length > 0 && <Flame size={16} aria-hidden />}
+      </h2>
       {list.length === 0 ? (
         <div className={ui.empty}>
           <h3>Неделя без пар</h3>
@@ -45,38 +41,52 @@ export function NextClass({
         </div>
       ) : (
         list.map((event) => (
-          <div key={event.id}>
-            <h2 className={s.nextTitle}>
-              <Link href={event.href ?? "/calendar"}>{event.title}</Link>
-            </h2>
-            <p className={`${ui.row} ${ui.muted}`}>
-              <Clock3 size={16} />
-              {eventDate(event) === addDays(dateKey(time), 1)
-                ? "Завтра · "
-                : eventDate(event) !== dateKey(time)
-                  ? `${formatDate(event.startsAt!)} · `
-                  : ""}
-              {formatTime(event.startsAt!)}–{formatTime(event.endsAt!)}
-            </p>
-            <Link
-              className={`${ui.row} ${ui.muted}`}
-              href={`/calendar?date=${eventDate(event)}&event=${event.id}`}
-            >
-              <MapPin size={16} />
-              {event.location.split(". ")[0]}
-            </Link>
-            <p className={ui.caption}>
-              {event.lecturer} · {event.description}
-            </p>
-            <div className={ui.listItem}>
-              <Link
-                className={`${ui.row} ${ui.link}`}
-                href={`/calendar?date=${eventDate(event)}&event=${event.id}`}
-              >
-                В календарь
-                <ArrowUpRight size={15} />
-              </Link>
+          <div className={s.nextDetails} key={event.id}>
+            <div className={s.nextDetailGroup}>
+              <h3 className={s.nextTitle}>
+                <Link href={event.href ?? "/calendar"}>{event.title}</Link>
+              </h3>
+              <p className={ui.caption}>{event.description}</p>
             </div>
+            <div className={`${s.nextDetailGroup} ${s.nextMeta}`}>
+              <p className={`${ui.row} ${ui.muted}`}>
+                <Clock3 size={16} aria-hidden />
+                {eventDate(event) === addDays(dateKey(time), 1)
+                  ? "Завтра · "
+                  : eventDate(event) !== dateKey(time)
+                    ? `${formatDate(event.startsAt!)} · `
+                    : ""}
+                {formatTime(event.startsAt!)}–{formatTime(event.endsAt!)}
+              </p>
+              {event.location && (
+                <Link
+                  className={`${ui.row} ${ui.muted}`}
+                  href={`/calendar?date=${eventDate(event)}&event=${event.id}`}
+                >
+                  <MapPin size={16} aria-hidden />
+                  {event.location.split(". ")[0]}
+                </Link>
+              )}
+            </div>
+            {event.lecturer && (
+              <div className={s.nextLecturer}>
+                <span className={s.nextLecturerAvatar} aria-hidden />
+                <div>
+                  <p className={s.nextLecturerName}>
+                    {event.lecturerId ? (
+                      <Link
+                        href={`/people/${encodeURIComponent(event.lecturerId)}`}
+                      >
+                        {event.lecturer}
+                      </Link>
+                    ) : (
+                      event.lecturer
+                    )}
+                  </p>
+                  <p className={ui.caption}>Преподаватель</p>
+                </div>
+              </div>
+            )}
           </div>
         ))
       )}

@@ -1,36 +1,34 @@
 import Link from "next/link";
-import { AlertCircle, ArrowUpRight, Plus, Wallet } from "lucide-react";
+import { AlertCircle, Plus, Wallet } from "lucide-react";
 import { pageStudent } from "@/server/access";
 import { db } from "@/server/db";
 import { calendarEvents } from "@/modules/calendar/service";
 import { HomeCalendar } from "@/modules/calendar/HomeCalendar";
 import { NextClass } from "@/modules/calendar/NextClass";
+import { DeadlinesCard } from "@/modules/dashboard/DeadlinesCard";
+import { dashboardDeadlines } from "@/modules/dashboard/deadlines";
+import { CommunityStrip } from "@/modules/dashboard/CommunityStrip";
+import { communityHighlights } from "@/modules/community/service";
 import {
   Card,
   PageTitle,
   SectionTitle,
   Badge,
-  Empty,
   ui,
 } from "@/shared/ui/primitives";
-import {
-  dateKey,
-  addDays,
-  formatDate,
-  formatTime,
-  money,
-} from "@/shared/lib/time";
+import { dateKey, addDays, formatDate, money } from "@/shared/lib/time";
 import { statusLabel } from "@/shared/config/statuses";
 import s from "@/modules/dashboard/dashboard.module.css";
 export default async function Home() {
   const student = await pageStudent();
   const today = dateKey();
   const now = new Date();
-  const [events, requests, community, payment] = await Promise.all([
+  const [events, deadlines, requests, community, payment] = await Promise.all([
     calendarEvents(student, {
       from: addDays(today, -3),
       to: addDays(today, 21),
     }),
+    dashboardDeadlines(student.id, now),
     db.studentRequest.findMany({
       where: {
         studentId: student.id,
@@ -40,29 +38,15 @@ export default async function Home() {
       orderBy: { updatedAt: "desc" },
       take: 3,
     }),
-    db.communityEvent.findMany({
-      where: {
-        startsAt: { gt: now },
-        OR: [{ groupId: null }, { groupId: student.groupId }],
-      },
-      orderBy: { startsAt: "asc" },
-      take: 2,
-    }),
+    communityHighlights(student.groupId, now),
     db.payment.findFirst({
       where: { studentId: student.id, status: "EXPECTED" },
       orderBy: { date: "asc" },
     }),
   ]);
-  const deadlines = events
-    .filter(
-      (e) =>
-        e.type === "DEADLINE" &&
-        !["PUBLISHED", "SUBMITTED", "COMPLETED"].includes(e.status ?? ""),
-    )
-    .slice(0, 3);
   const change = events.find((e) => e.changes?.length);
   return (
-    <>
+    <div className={s.dashboard}>
       <PageTitle
         title="Сегодня"
         description={`${formatDate(now, { weekday: "long", day: "numeric", month: "long" })} · Хорошего дня, ${student.name.split(" ")[0]}`}
@@ -74,109 +58,22 @@ export default async function Home() {
         }
       />
       <div className={ui.stack}>
-        <div className={s.top}>
-          <NextClass
-            events={events.filter(
-              (e) =>
-                e.startsAt &&
-                e.startsAt <
-                  new Date(now.getTime() + 7 * 86400000).toISOString(),
-            )}
-            now={now.toISOString()}
-          />
-          <Card>
-            <SectionTitle
-              title="Ближайшие дни"
-              href={`/calendar?date=${today}`}
-              label="Открыть календарь"
-            />
+        <div className={s.topRow}>
+          <Card className={s.top}>
             <HomeCalendar events={events} date={today} />
-          </Card>
-        </div>
-        <div className={s.middle}>
-          <Card>
-            <SectionTitle
-              title="Скоро дедлайн"
-              href="/calendar?types=DEADLINE"
-              label="Все сроки"
+            <NextClass
+              events={events.filter(
+                (e) =>
+                  e.startsAt &&
+                  e.startsAt <
+                    new Date(now.getTime() + 7 * 86400000).toISOString(),
+              )}
+              now={now.toISOString()}
             />
-            {deadlines.map((event) => (
-              <Link
-                href={event.href ?? "/calendar"}
-                className={s.deadline}
-                key={event.id}
-              >
-                <div className={s.dateBlock}>
-                  <strong>
-                    {formatDate(event.startsAt!, { day: "numeric" })}
-                  </strong>
-                  <small>
-                    {formatDate(event.startsAt!, { month: "short" })}
-                  </small>
-                </div>
-                <div className={s.fill}>
-                  <h3>{event.title}</h3>
-                  <small className={ui.muted}>{event.source}</small>
-                </div>
-                <small className={ui.muted}>
-                  {new Date(event.startsAt!) < now
-                    ? "Срок прошёл"
-                    : formatTime(event.startsAt!)}
-                </small>
-                <ArrowUpRight size={16} />
-              </Link>
-            ))}
-            {!deadlines.length && (
-              <Empty
-                title="Всё спокойно"
-                description="Ближайших незавершённых сроков нет."
-              />
-            )}
           </Card>
-          <Card>
-            <SectionTitle title="Требует внимания" />
-            <Link
-              href="/studies/results?status=attention"
-              className={s.attention}
-            >
-              <AlertCircle size={18} className={s.attentionIcon} />
-              <div>
-                <h3>Держи результат под контролем</h3>
-                <p className={ui.caption}>
-                  Посещаемость и обязательные работы могут влиять на допуск.
-                </p>
-              </div>
-              <ArrowUpRight size={16} />
-            </Link>
-            {change && (
-              <Link
-                href={`/calendar?date=${dateKey(change.startsAt!)}&event=${change.id}`}
-                className={s.attention}
-              >
-                <AlertCircle size={18} className={s.attentionIcon} />
-                <div>
-                  <h3>Изменение расписания</h3>
-                  <p className={ui.caption}>
-                    {change.changes![0].before} → {change.changes![0].after}
-                  </p>
-                </div>
-              </Link>
-            )}
-            {requests.some((r) => r.status === "NEEDS_INFO") && (
-              <Link
-                href={`/requests/${requests.find((r) => r.status === "NEEDS_INFO")!.id}`}
-                className={s.attention}
-              >
-                <AlertCircle size={18} className={s.attentionIcon} />
-                <div>
-                  <h3>Учебный офис ждёт уточнение</h3>
-                  <p className={ui.caption}>Ответьте в своём обращении.</p>
-                </div>
-              </Link>
-            )}
-          </Card>
+          <DeadlinesCard deadlines={deadlines} now={now} />
         </div>
-        <div className={s.bottom}>
+        <div className={s.attentionRow}>
           <Card>
             <SectionTitle
               title="Мои обращения"
@@ -187,7 +84,7 @@ export default async function Home() {
               <Link
                 key={r.id}
                 href={`/requests/${r.id}`}
-                className={`${ui.between} ${ui.listItem}`}
+                className={`${ui.between} ${ui.listLink}`}
               >
                 <div>
                   <h3>{r.service.title}</h3>
@@ -213,10 +110,53 @@ export default async function Home() {
                 </Badge>
               </Link>
             ))}
+          </Card>
+          <div className={ui.stack}>
+            <section
+              className={`${ui.card} ${s.attentionSection}`}
+              aria-labelledby="attention-title"
+            >
+              <h2 id="attention-title">Требует внимания</h2>
+              <Link
+                href="/studies/results?status=attention"
+                className={s.attention}
+              >
+                <AlertCircle size={16} className={s.attentionIcon} />
+                <div>
+                  <h3>Держи результат под контролем</h3>
+                  <p className={ui.caption}>
+                    Посещаемость и обязательные работы могут влиять на допуск.
+                  </p>
+                </div>
+              </Link>
+              {change && (
+                <Link
+                  href={`/calendar?date=${dateKey(change.startsAt!)}&event=${change.id}`}
+                  className={s.attention}
+                >
+                  <AlertCircle size={16} className={s.attentionIcon} />
+                  <div>
+                    <h3>Изменение расписания</h3>
+                    <p className={ui.caption}>
+                      {change.changes![0].before} → {change.changes![0].after}
+                    </p>
+                  </div>
+                </Link>
+              )}
+              <div className={s.attention}>
+                <AlertCircle size={16} className={s.attentionIcon} />
+                <div>
+                  <h3>Оценить своих преподавателей</h3>
+                  <p className={ui.caption}>
+                    Заполни анкету СОП до начала сессии.
+                  </p>
+                </div>
+              </div>
+            </section>
             {payment && (
-              <Link href="/finance" className={s.finance}>
+              <Link href="/finance" className={`${ui.card} ${s.finance}`}>
                 <div className={ui.row}>
-                  <Wallet size={18} />
+                  <Wallet size={18} aria-hidden />
                   <span>
                     Следующая стипендия
                     <br />
@@ -228,29 +168,10 @@ export default async function Home() {
                 <strong>{money(payment.amountKopecks)}</strong>
               </Link>
             )}
-          </Card>
-          <Card>
-            <SectionTitle
-              title="За пределами пар"
-              href="/community"
-              label="Афиша"
-            />
-            {community.map((event) => (
-              <Link
-                key={event.id}
-                href={`/community/${event.id}`}
-                className={`${s.eventTile} ${ui.stack}`}
-              >
-                <small className={ui.muted}>
-                  {formatDate(event.startsAt)} · {event.category}
-                </small>
-                <h3>{event.title}</h3>
-                <small className={ui.muted}>{event.location}</small>
-              </Link>
-            ))}
-          </Card>
+          </div>
         </div>
+        <CommunityStrip items={community} />
       </div>
-    </>
+    </div>
   );
 }

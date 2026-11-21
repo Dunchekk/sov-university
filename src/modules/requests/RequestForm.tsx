@@ -134,7 +134,10 @@ export function RequestForm({
                   : undefined,
               };
               return (
-                <div key={f.key}>
+                <div
+                  key={f.key}
+                  className={f.type === "checkbox" ? ui.checkField : ui.field}
+                >
                   <label htmlFor={`field-${f.key}`}>{f.label}</label>
                   {f.type === "textarea" ? (
                     <textarea

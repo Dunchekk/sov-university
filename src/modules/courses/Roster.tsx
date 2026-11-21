@@ -107,15 +107,15 @@ export function Roster({
             >
               Назад
             </Button>
-            <span className={ui.caption}>
-              Страница {page} · {data.total} участников
-            </span>
             <Button
               disabled={!ready || page * 20 >= data.total}
               onClick={() => setPage((p) => p + 1)}
             >
               Далее
             </Button>
+            <span className={ui.caption}>
+              Страница {page} · {data.total} участников
+            </span>
           </div>
         </>
       )}

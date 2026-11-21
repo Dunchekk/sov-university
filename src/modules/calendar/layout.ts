@@ -3,14 +3,20 @@ import type { CalendarEvent } from "./types";
 export function calendarRange(date: string, view: string) {
   if (view === "day") return { from: date, to: addDays(date, 1) };
   if (view === "week") {
-    const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
-    const from = addDays(date, -((weekday + 6) % 7));
-    return { from, to: addDays(from, 7) };
+    return { from: date, to: addDays(date, 7) };
   }
   const first = `${date.slice(0, 7)}-01`;
   const weekday = new Date(`${first}T12:00:00Z`).getUTCDay();
   const from = addDays(first, -((weekday + 6) % 7));
   return { from, to: addDays(from, 42) };
+}
+// Neighbouring days are rendered with real data before they enter the viewport.
+// The server recentres this buffer after horizontal scrolling settles.
+export function calendarDataRange(date: string, view: string) {
+  const range = calendarRange(date, view);
+  return view === "month"
+    ? range
+    : { from: addDays(range.from, -14), to: addDays(range.to, 14) };
 }
 export function eventsOnDay(events: CalendarEvent[], day: string) {
   const from = dayStart(day).getTime(),

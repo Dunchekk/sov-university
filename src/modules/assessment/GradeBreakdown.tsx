@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { courseResult } from "@/modules/courses/service";
 import { AttendanceIndicator } from "./AttendanceIndicator";
+import { ResultHelp } from "./ResultHelp";
 import { Card, Badge, ui } from "@/shared/ui/primitives";
 import { formatDate } from "@/shared/lib/time";
 import { statusLabel } from "@/shared/config/statuses";
@@ -86,58 +87,64 @@ export function GradeBreakdown({
   return (
     <div className={ui.stack}>
       <div className={ui.grid2}>
-        <Card>
-          <span className={ui.eyebrow}>Накопленные баллы</span>
-          <p className={ui.largeNumber}>
-            {grade.points} <span className={ui.muted}>/ {grade.maximum}</span>
-          </p>
-          <progress
-            className={ui.progress}
-            value={grade.points}
-            max={grade.maximum}
-            aria-label="Накопленные баллы"
-          />
-          <p className={ui.caption}>
-            Допуск от {scheme.admissionPoints} баллов · зачёт от{" "}
-            {scheme.passPoints}
-          </p>
-          <p>
-            {enrollment.officialGrade ? (
-              <>
-                Официальный итог: <strong>{enrollment.officialGrade}</strong> ·
-                правила v{enrollment.officialSchemeVersion}
-              </>
-            ) : (
-              <>
-                Предварительный расчёт:{" "}
-                <strong>
-                  {scheme.type === "PASS"
-                    ? grade.passed
-                      ? "Условия зачёта выполнены"
-                      : "Пока не зачтено"
-                    : `${grade.projectedGrade} / 10`}
-                </strong>
-              </>
+        <Card className={s.summaryCard}>
+          <div>
+            <span className={ui.eyebrow}>Накопленные баллы</span>
+            <p className={ui.largeNumber}>
+              {grade.points} <span className={ui.muted}>/ {grade.maximum}</span>
+            </p>
+          </div>
+          <div className={s.summaryGroup}>
+            <progress
+              className={ui.progress}
+              value={grade.points}
+              max={grade.maximum}
+              aria-label="Накопленные баллы"
+            />
+            <p className={ui.caption}>
+              Допуск от {scheme.admissionPoints} баллов · зачёт от{" "}
+              {scheme.passPoints}
+            </p>
+          </div>
+          <div className={s.summaryGroup}>
+            <p>
+              {enrollment.officialGrade ? (
+                <>
+                  Официальный итог: <strong>{enrollment.officialGrade}</strong>{" "}
+                  · правила v{enrollment.officialSchemeVersion}
+                </>
+              ) : (
+                <>
+                  Предварительный расчёт:{" "}
+                  <strong>
+                    {scheme.type === "PASS"
+                      ? grade.passed
+                        ? "Условия зачёта выполнены"
+                        : "Пока не зачтено"
+                      : `${grade.projectedGrade} / 10`}
+                  </strong>
+                </>
+              )}
+            </p>
+            {enrollment.officialGrade && (
+              <p className={ui.caption}>
+                Опубликован{" "}
+                {enrollment.publishedAt
+                  ? formatDate(enrollment.publishedAt)
+                  : "преподавателем"}
+                . Корректировка посещаемости:{" "}
+                {enrollment.officialAdjustment ?? 0}.
+              </p>
             )}
-          </p>
-          {enrollment.officialGrade && (
-            <p className={ui.caption}>
-              Опубликован{" "}
-              {enrollment.publishedAt
-                ? formatDate(enrollment.publishedAt)
-                : "преподавателем"}
-              . Корректировка посещаемости: {enrollment.officialAdjustment ?? 0}
-              .
-            </p>
-          )}
-          {!enrollment.officialGrade && grade.penalty > 0 && (
-            <p className={ui.caption}>
-              База {grade.baseGrade}/10, предварительное влияние посещаемости −
-              {grade.penalty}. Официальная оценка пока не опубликована.
-            </p>
-          )}
+            {!enrollment.officialGrade && grade.penalty > 0 && (
+              <p className={ui.caption}>
+                База {grade.baseGrade}/10, предварительное влияние посещаемости
+                −{grade.penalty}. Официальная оценка пока не опубликована.
+              </p>
+            )}
+          </div>
         </Card>
-        <Card>
+        <Card className={s.summaryCard}>
           <h3>Посещаемость</h3>
           <AttendanceIndicator attendance={attendance} scheme={scheme} />
           <p className={ui.caption}>
@@ -151,9 +158,41 @@ export function GradeBreakdown({
           </p>
         </Card>
       </div>
-      <Card>
-        <div className={ui.between}>
-          <h2>Как получить результат</h2>
+      <Card className={s.summaryCard}>
+        <div className={`${ui.between} ${s.assessmentHeader}`}>
+          <div className={s.assessmentHeading}>
+            <h2>Как получить результат</h2>
+            {enrollment.status !== "COMPLETED" && (
+              <ResultHelp>
+                <p>
+                  Для допуска нужно {scheme.admissionPoints} баллов и все
+                  обязательные работы.{" "}
+                  {grade.shortfall
+                    ? `Не хватает ${grade.shortfall} баллов.`
+                    : "Порог баллов достигнут."}
+                </p>
+                {grade.missing.length > 0 && (
+                  <p>
+                    Обязательные работы: {grade.missing.join(", ")}. Баллы за
+                    другие задания не заменяют их сдачу.
+                  </p>
+                )}
+                {grade.blockedMandatory.length > 0 && (
+                  <p className={ui.error}>
+                    Истёк срок обязательных работ:{" "}
+                    {grade.blockedMandatory.join(", ")}. Нужна консультация по
+                    дальнейшей сдаче.
+                  </p>
+                )}
+                <p>
+                  Ещё доступно до {grade.remaining} баллов.{" "}
+                  {grade.canReachPass
+                    ? "Итог зависит от результатов оставшихся работ."
+                    : "Обычных оставшихся баллов недостаточно: обратитесь к преподавателю за консультацией по пересдаче."}
+                </p>
+              </ResultHelp>
+            )}
+          </div>
           <Badge tone={grade.admitted ? "success" : "warning"}>
             {enrollment.status === "COMPLETED"
               ? "Аттестация завершена"
@@ -162,36 +201,6 @@ export function GradeBreakdown({
                 : "Условия ещё не выполнены"}
           </Badge>
         </div>
-        {enrollment.status !== "COMPLETED" && (
-          <div className={ui.stack}>
-            <p>
-              Для допуска нужно {scheme.admissionPoints} баллов и все
-              обязательные работы.{" "}
-              {grade.shortfall
-                ? `Не хватает ${grade.shortfall} баллов.`
-                : "Порог баллов достигнут."}
-            </p>
-            {grade.missing.length > 0 && (
-              <p>
-                Обязательные работы: {grade.missing.join(", ")}. Баллы за другие
-                задания не заменяют их сдачу.
-              </p>
-            )}
-            {grade.blockedMandatory.length > 0 && (
-              <p className={ui.error}>
-                Истёк срок обязательных работ:{" "}
-                {grade.blockedMandatory.join(", ")}. Нужна консультация по
-                дальнейшей сдаче.
-              </p>
-            )}
-            <p>
-              Ещё доступно до {grade.remaining} баллов.{" "}
-              {grade.canReachPass
-                ? "Итог зависит от результатов оставшихся работ."
-                : "Обычных оставшихся баллов недостаточно: обратитесь к преподавателю за консультацией по пересдаче."}
-            </p>
-          </div>
-        )}
         <AssessmentTable assessments={assessments} />
         <AssessmentRules scheme={scheme} />
         <AttendanceJournal records={records} />

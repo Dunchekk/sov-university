@@ -6,6 +6,7 @@ export const eventTypes = [
   "PERSONAL",
 ] as const;
 export type EventType = (typeof eventTypes)[number];
+export type ExamPeriod = { from: string; to: string };
 export const eventLabels: Record<EventType, string> = {
   LESSON: "Пара",
   DEADLINE: "Дедлайн",
@@ -26,7 +27,9 @@ export type CalendarEvent = {
   endDate: string | null;
   timezone: string;
   location: string;
+  room?: string;
   lecturer?: string;
+  lecturerId?: string;
   group?: string;
   courseId?: string;
   href?: string;

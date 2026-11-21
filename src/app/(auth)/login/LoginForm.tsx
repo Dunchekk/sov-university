@@ -10,7 +10,7 @@ export function LoginForm() {
   const [busy, setBusy] = useState(false);
   return (
     <form
-      className={s.form}
+      className={`${ui.card} ${s.form}`}
       onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);

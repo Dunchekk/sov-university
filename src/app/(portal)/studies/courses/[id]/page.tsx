@@ -121,7 +121,7 @@ export default async function CoursePage({
             <Link
               key={l.id}
               href={`/calendar?date=${dateKey(l.startsAt)}&event=${l.id}`}
-              className={`${ui.between} ${ui.listItem}`}
+              className={`${ui.between} ${ui.listLink}`}
             >
               <div>
                 <h3>

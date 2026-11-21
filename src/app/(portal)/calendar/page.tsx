@@ -1,10 +1,14 @@
 import { pageStudent } from "@/server/access";
-import { calendarEvents, parseCalendarQuery } from "@/modules/calendar/service";
-import { calendarRange } from "@/modules/calendar/layout";
+import {
+  calendarEvents,
+  calendarExamPeriod,
+  parseCalendarQuery,
+} from "@/modules/calendar/service";
+import { calendarDataRange } from "@/modules/calendar/layout";
 import { Calendar } from "@/modules/calendar/Calendar";
+import { CalendarConnections } from "@/modules/calendar/CalendarConnections";
 import { eventTypes } from "@/modules/calendar/types";
 import { dateKey } from "@/shared/lib/time";
-import { PageTitle } from "@/shared/ui/primitives";
 import { z } from "zod";
 export default async function CalendarPage({
   searchParams,
@@ -17,29 +21,31 @@ export default async function CalendarPage({
   const view = ["day", "week", "month"].includes(p.view ?? "")
     ? p.view!
     : (student.preference?.calendarView ?? "week");
-  const range = calendarRange(date, view);
+  const range = calendarDataRange(date, view);
   const query = parseCalendarQuery(
     new URLSearchParams({
       ...(Object.fromEntries(
         Object.entries(p).filter(([, v]) => v !== undefined),
       ) as Record<string, string>),
       ...range,
+      finance: "false",
     }),
   );
-  const events = await calendarEvents(student, query);
+  const [events, examPeriod] = await Promise.all([
+    calendarEvents(student, query),
+    calendarExamPeriod(student),
+  ]);
   return (
     <>
-      <PageTitle
-        title="Календарь"
-        description="Твой учебный ритм. Занятия, сроки и планы."
-      />
       <Calendar
         events={events}
+        examPeriod={examPeriod}
         date={date}
         view={view}
         types={query.types ?? [...eventTypes]}
         schedules={query.schedules ?? []}
         now={new Date().toISOString()}
+        connections={<CalendarConnections studentId={student.id} />}
       />
     </>
   );

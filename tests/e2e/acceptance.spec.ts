@@ -293,6 +293,32 @@ test("attendance explanation supports keyboard and returns focus; course and res
   ).toBeVisible();
 });
 
+test("assessment guidance opens only from the question button and closes with Escape or outside click", async ({
+  studentPage: page,
+}) => {
+  await page.goto("/studies/courses/course-0?tab=assessment");
+  const help = page.getByRole("button", {
+    name: "Условия получения результата",
+  });
+  const guidance = page.getByText(/^Для допуска нужно/);
+  await expect(help).toHaveAttribute("aria-expanded", "false");
+  await expect(guidance).toBeHidden();
+
+  await help.press("Enter");
+  await expect(help).toHaveAttribute("aria-expanded", "true");
+  await expect(guidance).toBeVisible();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Escape");
+  await expect(guidance).toBeHidden();
+  await expect(help).toBeFocused();
+
+  await help.click();
+  await expect(guidance).toBeVisible();
+  await page.getByRole("heading", { name: "Как получить результат" }).click();
+  await expect(help).toHaveAttribute("aria-expanded", "false");
+  await expect(guidance).toBeHidden();
+});
+
 for (const width of [1440, 1280, 360])
   test(`both themes and essential routes fit viewport ${width}`, async ({
     studentPage: page,
@@ -334,6 +360,25 @@ for (const width of [1440, 1280, 360])
         const response = await page.goto(route);
         expect(response?.status(), route).toBe(200);
         await page.locator("h1").waitFor();
+        const container = await page.locator("main#main").evaluate((main) => {
+          const style = getComputedStyle(main);
+          const padding =
+            parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+          const bounds = main.getBoundingClientRect();
+          const workspace = main.parentElement!.getBoundingClientRect();
+          return {
+            width: bounds.width - padding,
+            available: workspace.width - padding,
+            left: bounds.left - workspace.left,
+            right: workspace.right - bounds.right,
+          };
+        });
+        const expectedWidth =
+          route === "/calendar?view=month"
+            ? container.available
+            : Math.min(1048, container.available);
+        expect(container.width, route).toBeCloseTo(expectedWidth, 0);
+        expect(container.left, route).toBeCloseTo(container.right, 0);
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
         expect(
           await page.evaluate(
@@ -347,6 +392,33 @@ for (const width of [1440, 1280, 360])
               () => getComputedStyle(document.body).backgroundColor,
             ),
           ).toBe("rgb(0, 0, 0)");
+        if (route === "/calendar?view=month") {
+          const workspace = page.locator("[data-calendar-workspace]");
+          await expect(workspace).toHaveCSS(
+            "background-color",
+            theme === "dark" ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)",
+          );
+          await expect(page.locator("main")).toHaveCSS("padding", "0px");
+          expect(
+            await page
+              .locator('[class*="monthDay"]')
+              .evaluateAll((cells) =>
+                cells.every((cell) =>
+                  Array.from(cell.children).every(
+                    (child) =>
+                      child.getBoundingClientRect().bottom <=
+                      cell.getBoundingClientRect().bottom,
+                  ),
+                ),
+              ),
+          ).toBe(true);
+          if (width > 650) {
+            const bounds = (await workspace.boundingBox())!;
+            expect(
+              Math.abs(bounds.y + bounds.height - page.viewportSize()!.height),
+            ).toBeLessThan(2);
+          }
+        }
         durations[`${theme} ${route}`] = Math.round(performance.now() - start);
         if (
           ["/", "/calendar?view=month", "/services"].includes(route) &&

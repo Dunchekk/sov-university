@@ -1,7 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Upload, Link2, Trash2 } from "lucide-react";
+import { ChevronDown, Download, Upload, Link2, Trash2 } from "lucide-react";
 import { Button, Card, Empty, ui } from "@/shared/ui/primitives";
 import { CopyButton } from "@/shared/ui/CopyButton";
 import { Dialog } from "@/shared/ui/Dialog";
@@ -9,6 +9,12 @@ import { api } from "@/shared/lib/client";
 import { addDays, formatDate } from "@/shared/lib/time";
 import { eventTypes, eventLabels, type EventType } from "./types";
 import type { previewImport } from "./integrations";
+import {
+  CalendarDateField,
+  formatCalendarDate,
+  parseCalendarDate,
+} from "./CalendarDateField";
+import s from "./calendar.module.css";
 
 type Source = { id: string; name: string; count: number };
 type Feed = { id: string; name: string; layers: string[]; createdAt: string };
@@ -21,32 +27,35 @@ function Layers({
   onChange: (v: EventType[]) => void;
 }) {
   return (
-    <fieldset className={ui.row}>
+    <fieldset className={ui.fieldset}>
       <legend>Что включить</legend>
-      {eventTypes.map((type) => (
-        <label className={ui.row} key={type}>
-          <input
-            type="checkbox"
-            checked={value.includes(type)}
-            onChange={(e) =>
-              onChange(
-                e.target.checked
-                  ? [...value, type]
-                  : value.filter((x) => x !== type),
-              )
-            }
-          />
-          {type === "PERSONAL" ? "Личное и импортированное" : eventLabels[type]}
-        </label>
-      ))}
+      <div className={ui.row}>
+        {eventTypes.map((type) => (
+          <label className={ui.row} key={type}>
+            <input
+              type="checkbox"
+              checked={value.includes(type)}
+              onChange={(e) =>
+                onChange(
+                  e.target.checked
+                    ? [...value, type]
+                    : value.filter((x) => x !== type),
+                )
+              }
+            />
+            {type === "PERSONAL"
+              ? "Личное и импортированное"
+              : eventLabels[type]}
+          </label>
+        ))}
+      </div>
     </fieldset>
   );
 }
 function ExportPanel({ today }: { today: string }) {
-  const [from, setFrom] = useState(today),
-    [through, setThrough] = useState(addDays(today, 6)),
+  const [from, setFrom] = useState(formatCalendarDate(today)),
+    [through, setThrough] = useState(formatCalendarDate(addDays(today, 6))),
     [layers, setLayers] = useState(defaults),
-    [finance, setFinance] = useState(false),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   async function download(e: FormEvent) {
@@ -55,10 +64,9 @@ function ExportPanel({ today }: { today: string }) {
     setError("");
     try {
       const query = new URLSearchParams({
-        from,
-        to: addDays(through, 1),
+        from: parseCalendarDate(from),
+        to: addDays(parseCalendarDate(through), 1),
         types: layers.join(","),
-        finance: String(finance),
       });
       const response = await fetch(`/api/calendar/export.ics?${query}`);
       if (!response.ok)
@@ -96,8 +104,8 @@ function ExportPanel({ today }: { today: string }) {
             type="button"
             small
             onClick={() => {
-              setFrom(today);
-              setThrough(addDays(today, Number(length)));
+              setFrom(formatCalendarDate(today));
+              setThrough(formatCalendarDate(addDays(today, Number(length))));
             }}
           >
             {label}
@@ -105,35 +113,21 @@ function ExportPanel({ today }: { today: string }) {
         ))}
       </div>
       <div className={ui.grid2}>
-        <label>
-          С
-          <input
-            type="date"
-            required
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
-        </label>
-        <label>
-          По
-          <input
-            type="date"
-            required
-            min={from}
-            value={through}
-            onChange={(e) => setThrough(e.target.value)}
-          />
-        </label>
+        <CalendarDateField
+          label="С"
+          today={today}
+          value={from}
+          onChange={setFrom}
+        />
+        <CalendarDateField
+          label="По"
+          today={today}
+          value={through}
+          onChange={setThrough}
+          min={parseCalendarDate(from) || undefined}
+        />
       </div>
       <Layers value={layers} onChange={setLayers} />
-      <label className={ui.row}>
-        <input
-          type="checkbox"
-          checked={finance}
-          onChange={(e) => setFinance(e.target.checked)}
-        />
-        Включить мои финансовые сроки без сумм
-      </label>
       <p className={ui.caption}>
         Оценки, посещаемость, участники и личные сведения не экспортируются.
         Диапазон — до 12 месяцев.
@@ -146,7 +140,7 @@ function ExportPanel({ today }: { today: string }) {
       <div>
         <Button variant="primary" disabled={busy || !layers.length}>
           <Download size={17} />
-          {busy ? "Готовим файл…" : "Скачать ICS"}
+          {busy ? "Готовим файл…" : "Скачать календарь"}
         </Button>
       </div>
     </form>
@@ -154,6 +148,10 @@ function ExportPanel({ today }: { today: string }) {
 }
 function ImportPanel({ today, sources }: { today: string; sources: Source[] }) {
   const router = useRouter();
+  const [from, setFrom] = useState(formatCalendarDate(today));
+  const [through, setThrough] = useState(
+    formatCalendarDate(addDays(today, 179)),
+  );
   const [preview, setPreview] = useState<Awaited<
       ReturnType<typeof previewImport>
     > | null>(null),
@@ -216,7 +214,7 @@ function ImportPanel({ today, sources }: { today: string; sources: Source[] }) {
           Загрузите ICS из другого календаря. Сначала покажем предпросмотр,
           затем сохраним события в отдельный личный слой.
         </p>
-        <fieldset disabled={busy} className={ui.stack}>
+        <fieldset disabled={busy} className={ui.fieldset}>
           <label>
             Файл ICS
             <input
@@ -251,27 +249,33 @@ function ImportPanel({ today, sources }: { today: string; sources: Source[] }) {
                 defaultValue="Мои планы"
               />
             </label>
-            <label>
-              С<input name="from" type="date" required defaultValue={today} />
-            </label>
-            <label>
-              По
-              <input
-                name="to"
-                type="date"
-                required
-                defaultValue={addDays(today, 179)}
-              />
-            </label>
+            <CalendarDateField
+              label="С"
+              name="from"
+              today={today}
+              value={from}
+              onChange={setFrom}
+            />
+            <CalendarDateField
+              label="По"
+              name="to"
+              today={today}
+              value={through}
+              onChange={setThrough}
+              min={parseCalendarDate(from) || undefined}
+            />
           </div>
           <label>
             Часовой пояс для времени без зоны
-            <input
-              name="timezone"
-              required
-              defaultValue="Europe/Moscow"
-              list="timezones"
-            />
+            <span className={s.timezoneField}>
+              <input
+                name="timezone"
+                required
+                defaultValue="Europe/Moscow"
+                list="timezones"
+              />
+              <ChevronDown size={17} aria-hidden="true" />
+            </span>
             <datalist id="timezones">
               <option>Europe/Moscow</option>
               <option>Europe/Berlin</option>
@@ -306,6 +310,7 @@ function ImportPanel({ today, sources }: { today: string; sources: Source[] }) {
       )}
       <Dialog
         open={!!preview}
+        dismissible={!busy}
         onClose={() => {
           if (!busy) setPreview(null);
         }}
@@ -568,7 +573,7 @@ export function Integrations({
     <div className={ui.stack}>
       <nav className={ui.row} aria-label="Способ подключения">
         {[
-          ["export", "Скачать ICS"],
+          ["export", "Скачать"],
           ["import", "Импортировать"],
           ["feed", "Подписка"],
         ].map(([id, label]) => (

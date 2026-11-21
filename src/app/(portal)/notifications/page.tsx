@@ -33,7 +33,7 @@ export default async function NotificationsPage({
         description="Всё, что изменилось и требует твоего внимания."
         action={<ReadNotification />}
       />
-      <form className={ui.row}>
+      <form className={ui.filterBar}>
         <label>
           Категория
           <select name="category" defaultValue={p.category ?? ""}>
