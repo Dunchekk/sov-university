@@ -34,6 +34,7 @@ const tabs: Record<
     initial: "teachers",
     labels: {
       teachers: "Преподаватели",
+      all: "Все преподаватели",
       group: "Моя группа",
       departments: "Подразделения",
     },

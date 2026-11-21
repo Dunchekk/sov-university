@@ -12,7 +12,10 @@ export const GET = route(async (request) => {
       select: { id: true, name: true },
     }),
     db.person.findMany({
-      where: { name },
+      where: {
+        name,
+        OR: [{ courses: { some: {} } }, { lessons: { some: {} } }],
+      },
       take: 8,
       select: { id: true, name: true },
     }),

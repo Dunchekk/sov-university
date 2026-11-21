@@ -19,7 +19,11 @@ import {
   filterValue,
   type FilterParams,
 } from "@/shared/lib/filters";
+import { LecturerPortrait } from "./LecturerPortrait";
+import s from "./people.module.css";
+
 const path = "/people";
+const teacherPageSize = 30;
 export default async function PeoplePage({
   searchParams,
 }: {
@@ -29,40 +33,45 @@ export default async function PeoplePage({
   const p = await searchParams;
   const requestedTab = filterValue(p.tab);
   const tab =
-    requestedTab === "group" || requestedTab === "departments"
+    requestedTab === "group" ||
+    requestedTab === "departments" ||
+    requestedTab === "all"
       ? requestedTab
       : "teachers";
+  const teacherTab = tab === "teachers" || tab === "all";
   const q = filterValue(p.q).trim().slice(0, 80);
   const page = filterPage(p.page);
   const pageHref = (page: number) =>
     filterHref(path, { tab, q, page: page > 1 ? page : undefined });
   const contains = containsText(q);
   const [teachers, group, departments, total] = await Promise.all([
-    tab === "teachers"
+    teacherTab
       ? db.person.findMany({
           where: {
-            courses: {
-              some: { enrollments: { some: { studentId: student.id } } },
-            },
-            OR: [
-              { name: contains },
-              { department: contains },
-              { courses: { some: { name: contains } } },
-            ],
+            courses:
+              tab === "teachers"
+                ? { some: { enrollments: { some: { studentId: student.id } } } }
+                : undefined,
+            OR: q
+              ? [
+                  { name: contains },
+                  { department: contains },
+                  { courses: { some: { name: contains } } },
+                  { profile: { is: { topics: contains } } },
+                ]
+              : undefined,
           },
-          include: {
-            courses: {
-              select: {
-                id: true,
-                name: true,
-                enrollments: {
-                  where: { studentId: student.id },
-                  select: { id: true },
-                },
-              },
+          select: {
+            id: true,
+            name: true,
+            department: true,
+            profile: {
+              select: { avatar: true, position: true, phoneExtension: true },
             },
           },
-          take: 20,
+          orderBy: [{ name: "asc" }, { id: "asc" }],
+          skip: (page - 1) * teacherPageSize,
+          take: teacherPageSize + 1,
         })
       : [],
     tab === "group"
@@ -96,6 +105,7 @@ export default async function PeoplePage({
         active={tab}
         items={[
           ["teachers", "Мои преподаватели"],
+          ["all", "Все преподаватели"],
           ["group", `Моя группа · ${student.group.name}`],
           ["departments", "Подразделения"],
         ].map(([id, label]) => ({
@@ -117,69 +127,89 @@ export default async function PeoplePage({
         </label>
         <button className={ui.button}>Найти</button>
       </FilterForm>
-      <div className={ui.grid2}>
-        {teachers.map((t) => (
-          <Card key={t.id}>
-            <div className={ui.stack}>
-              <div className={ui.row}>
-                <Avatar name={t.name} />
+      {teachers.length > 0 && (
+        <ul className={s.teacherList} aria-label="Преподаватели">
+          {teachers.slice(0, teacherPageSize).map((teacher) => (
+            <li key={teacher.id}>
+              <Link
+                className={s.teacherRow}
+                href={`/people/${encodeURIComponent(teacher.id)}`}
+                prefetch={false}
+              >
+                <LecturerPortrait
+                  name={teacher.name}
+                  src={teacher.profile?.avatar}
+                />
                 <div>
-                  <h2>{t.name}</h2>
-                  <p className={ui.caption}>{t.department}</p>
+                  <h2 className={s.teacherName}>{teacher.name}</h2>
+                  <p className={s.teacherMeta}>
+                    {teacher.profile?.position ?? "Преподаватель"} ·{" "}
+                    {teacher.department}
+                  </p>
+                </div>
+                {teacher.profile?.phoneExtension && (
+                  <span className={s.extension}>
+                    доб. {teacher.profile.phoneExtension}
+                  </span>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      {teacherTab &&
+        (page > 1 || (page < 100 && teachers.length > teacherPageSize)) && (
+          <nav className={s.pagination} aria-label="Страницы преподавателей">
+            {page > 1 && (
+              <Link className={ui.button} href={pageHref(page - 1)}>
+                Назад
+              </Link>
+            )}
+            {page < 100 && teachers.length > teacherPageSize && (
+              <Link className={ui.button} href={pageHref(page + 1)}>
+                Далее
+              </Link>
+            )}
+          </nav>
+        )}
+      {!teacherTab && (
+        <div className={ui.grid2}>
+          {group.map((p) => (
+            <Card key={p.id}>
+              <div className={ui.row}>
+                <Avatar name={p.name} />
+                <div>
+                  <h3>{p.name}</h3>
+                  <p className={ui.caption}>Студент · {student.group.name}</p>
                 </div>
               </div>
-              <p className={ui.muted}>
-                {t.courses.map((c) => c.name).join(" · ")}
-              </p>
-              <p className={ui.caption}>{t.consultation}</p>
-              <div className={ui.row}>
-                <span>{t.email}</span>
-                <CopyButton value={t.email} />
+            </Card>
+          ))}
+          {departments.map((d) => (
+            <Card key={d.id}>
+              <div className={ui.stack}>
+                <h2>{d.name}</h2>
+                <p>{d.description}</p>
+                <p className={ui.caption}>
+                  {d.location}
+                  <br />
+                  {d.hours}
+                </p>
+                <div className={ui.row}>
+                  {d.email}
+                  <CopyButton value={d.email} />
+                </div>
+                <Link
+                  className={ui.button}
+                  href={`/services/general?subject=${encodeURIComponent(`Вопрос: ${d.name}`)}`}
+                >
+                  Написать обращение
+                </Link>
               </div>
-              <Link
-                className={ui.link}
-                href={`/calendar?schedules=lecturer:${t.id}`}
-              >
-                Посмотреть опубликованное расписание →
-              </Link>
-            </div>
-          </Card>
-        ))}
-        {group.map((p) => (
-          <Card key={p.id}>
-            <div className={ui.row}>
-              <Avatar name={p.name} />
-              <div>
-                <h3>{p.name}</h3>
-                <p className={ui.caption}>Студент · {student.group.name}</p>
-              </div>
-            </div>
-          </Card>
-        ))}
-        {departments.map((d) => (
-          <Card key={d.id}>
-            <div className={ui.stack}>
-              <h2>{d.name}</h2>
-              <p>{d.description}</p>
-              <p className={ui.caption}>
-                {d.location}
-                <br />
-                {d.hours}
-              </p>
-              <div className={ui.row}>
-                {d.email}
-                <CopyButton value={d.email} />
-              </div>
-              <Link
-                className={ui.button}
-                href={`/services/general?subject=${encodeURIComponent(`Вопрос: ${d.name}`)}`}
-              >
-                Написать обращение
-              </Link>
-            </div>
-          </Card>
-        ))}
-      </div>
+            </Card>
+          ))}
+        </div>
+      )}
       {tab === "group" && (
         <Card>
           <h3>
