@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { db } from "@/server/db";
 import { formatDate, formatTime } from "@/shared/lib/time";
 import { pageStudent } from "@/server/access";
@@ -216,9 +217,29 @@ export default async function ResultsPage({
 }: {
   searchParams: Promise<Query>;
 }) {
+  const query = await searchParams;
+  return (
+    <>
+      <PageTitle title="Оценки и посещаемость" />
+      <Suspense
+        key={JSON.stringify(query)}
+        fallback={
+          <div
+            className={ui.skeleton}
+            role="status"
+            aria-label="Загрузка результатов"
+          />
+        }
+      >
+        <ResultsContent query={query} />
+      </Suspense>
+    </>
+  );
+}
+
+async function ResultsContent({ query }: { query: Query }) {
   const student = await pageStudent();
-  const [query, all, retakes] = await Promise.all([
-    searchParams,
+  const [all, retakes] = await Promise.all([
     myCourses(student),
     db.retake.findMany({
       where: { enrollment: { studentId: student.id } },
@@ -292,7 +313,6 @@ export default async function ResultsPage({
 
   return (
     <>
-      <PageTitle title="Оценки и посещаемость" />
       <div className={s.controls}>
         <Tabs
           active={status}

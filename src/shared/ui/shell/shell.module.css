@@ -61,6 +61,7 @@
 }
 .navItem,
 .groupButton {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -91,6 +92,18 @@
   background: var(--bg-surface);
   color: var(--text-primary);
   font-weight: var(--weight-medium);
+}
+.navItem:has(.navPending) {
+  background: var(--bg-hover);
+}
+.navPending {
+  position: absolute;
+  inset-inline-end: var(--space-2);
+  inset-block-start: var(--space-2);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
 }
 .subnav {
   padding-left: var(--space-8);

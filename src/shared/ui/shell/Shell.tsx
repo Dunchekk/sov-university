@@ -1,6 +1,6 @@
 "use client";
 import { Suspense, useState, type ReactNode } from "react";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import {
   House,
@@ -48,6 +48,12 @@ const secondaryLabels: Record<string, string> = {
   "/support": "Поддержка",
   "/requests": "Мои обращения",
 };
+
+function NavigationPending() {
+  const { pending } = useLinkStatus();
+  return pending ? <span aria-hidden className={s.navPending} /> : null;
+}
+
 export function Shell({
   name,
   group,
@@ -87,6 +93,7 @@ export function Shell({
     >
       <Icon size={19} strokeWidth={1.7} />
       <span className={s.label}>{label}</span>
+      <NavigationPending />
     </Link>
   );
   return (
@@ -138,6 +145,7 @@ export function Shell({
                   onClick={() => setMobile(false)}
                 >
                   {label}
+                  <NavigationPending />
                 </Link>
               ))}
             </div>
