@@ -2,19 +2,33 @@ import Link from "next/link";
 import { Award, Plus } from "lucide-react";
 import { pageStudent } from "@/server/access";
 import { db } from "@/server/db";
-import { PageTitle, Card, Badge, Empty, ui } from "@/shared/ui/primitives";
+import {
+  PageTitle,
+  Card,
+  Badge,
+  Empty,
+  ActionLink,
+  ui,
+} from "@/shared/ui/primitives";
+import { FilterForm, FilterSelect } from "@/shared/ui/FilterForm";
+import { filterValue, type FilterParams } from "@/shared/lib/filters";
 import { statusLabel } from "@/shared/config/statuses";
+import { achievementCategories } from "@/modules/achievements/categories";
+const path = "/studies/achievements";
 export default async function AchievementsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<FilterParams>;
 }) {
   const student = await pageStudent();
   const p = await searchParams;
+  const category = achievementCategories.find(
+    (value) => value === filterValue(p.category),
+  );
   const items = await db.achievement.findMany({
     where: {
       studentId: student.id,
-      ...(p.category ? { category: p.category } : {}),
+      category,
     },
     orderBy: { date: "desc" },
     take: 100,
@@ -34,24 +48,18 @@ export default async function AchievementsPage({
           </Link>
         }
       />
-      <form className={ui.filterBar}>
+      <FilterForm action={path} className={ui.filterBar}>
         <label>
           Категория
-          <select name="category" defaultValue={p.category ?? ""}>
+          <FilterSelect name="category" value={category ?? ""}>
             <option value="">Все категории</option>
-            {[
-              "Учёба",
-              "Наука",
-              "Творчество",
-              "Спорт",
-              "Общественная деятельность",
-            ].map((v) => (
+            {achievementCategories.map((v) => (
               <option key={v}>{v}</option>
             ))}
-          </select>
+          </FilterSelect>
         </label>
         <button className={ui.button}>Показать</button>
-      </form>
+      </FilterForm>
       <div className={ui.grid3}>
         {items.map((item) => (
           <Card key={item.id}>
@@ -86,8 +94,19 @@ export default async function AchievementsPage({
       </div>
       {!items.length && (
         <Empty
-          title="Здесь будет твоя история"
-          description="Добавьте достижение с подтверждением."
+          title={
+            category
+              ? "Нет достижений в этой категории"
+              : "Здесь будет твоя история"
+          }
+          description={
+            category ? undefined : "Добавьте достижение с подтверждением."
+          }
+          action={
+            category ? (
+              <ActionLink href={path}>Все категории</ActionLink>
+            ) : undefined
+          }
         />
       )}
     </>

@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { db } from "@/server/db";
 import { formatDate, formatTime } from "@/shared/lib/time";
+import {
+  filterHref,
+  filterValue,
+  type FilterParams,
+} from "@/shared/lib/filters";
+import { FilterForm, FilterSelect } from "@/shared/ui/FilterForm";
 import { pageStudent } from "@/server/access";
 import { myCourses } from "@/modules/courses/service";
 import { GradeBreakdown } from "@/modules/assessment/GradeBreakdown";
@@ -27,17 +33,8 @@ const sorts = [
   { id: "name", label: "По названию (А–Я)" },
 ] as const;
 const byName = new Intl.Collator("ru");
-type Query = Record<string, string | string[] | undefined>;
 type Result = Awaited<ReturnType<typeof myCourses>>[number];
 type Retake = Awaited<ReturnType<typeof db.retake.findMany>>[number];
-
-function resultHref(params: Record<string, string>) {
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value) query.set(key, value);
-  }
-  return query.size ? `${path}?${query}` : path;
-}
 
 function prepareResult(result: Result, retakes: Retake[], now: Date) {
   const { attendance, enrollment, grade } = result;
@@ -214,7 +211,7 @@ function ResultRow({
 export default async function ResultsPage({
   searchParams,
 }: {
-  searchParams: Promise<Query>;
+  searchParams: Promise<FilterParams>;
 }) {
   const student = await pageStudent();
   const [query, all, retakes] = await Promise.all([
@@ -240,13 +237,19 @@ export default async function ResultsPage({
     ...new Set(courses.map((course) => course.assessmentType)),
   ].sort(byName.compare);
   const filters = {
-    course: courses.find((course) => course.id === query.course)?.id ?? "",
-    semester: semesters.find((semester) => semester === query.semester) ?? "",
-    type: types.find((type) => type === query.type) ?? "",
+    course:
+      courses.find((course) => course.id === filterValue(query.course))?.id ??
+      "",
+    semester:
+      semesters.find((semester) => semester === filterValue(query.semester)) ??
+      "",
+    type: types.find((type) => type === filterValue(query.type)) ?? "",
   };
-  const status = tabs.find((tab) => tab.id === query.status)?.id ?? "all";
+  const status =
+    tabs.find((tab) => tab.id === filterValue(query.status))?.id ?? "all";
   const sort =
-    sorts.find((option) => option.id === query.sort)?.id ?? "priority";
+    sorts.find((option) => option.id === filterValue(query.sort))?.id ??
+    "priority";
   const retakesByEnrollment = Map.groupBy(
     retakes,
     (retake) => retake.enrollmentId,
@@ -285,7 +288,7 @@ export default async function ResultsPage({
   });
   const hasFilters = Object.values(filters).some(Boolean);
   const urlSort = sort === "priority" ? "" : sort;
-  const resetHref = resultHref({
+  const resetHref = filterHref(path, {
     status: status === "all" ? "" : status,
     sort: urlSort,
   });
@@ -299,61 +302,59 @@ export default async function ResultsPage({
           items={tabs.map(({ id, label }) => ({
             id,
             label: `${label} · ${buckets[id].length}`,
-            href: resultHref({
+            href: filterHref(path, {
               ...filters,
               status: id === "all" ? "" : id,
               sort: urlSort,
             }),
           }))}
         />
-        <form
+        <FilterForm
           action={path}
-          method="get"
           className={s.filters}
           aria-label="Фильтры и порядок результатов"
-          key={resultHref({ ...filters, status, sort })}
         >
           <input type="hidden" name="status" value={status} />
           <label>
             Дисциплина
-            <select name="course" defaultValue={filters.course}>
+            <FilterSelect name="course" value={filters.course}>
               <option value="">Все дисциплины</option>
               {courses.map((course) => (
                 <option key={course.id} value={course.id}>
                   {course.name} · {course.semester} сем.
                 </option>
               ))}
-            </select>
+            </FilterSelect>
           </label>
           <label>
             Семестр
-            <select name="semester" defaultValue={filters.semester}>
+            <FilterSelect name="semester" value={filters.semester}>
               <option value="">Все семестры</option>
               {semesters.map((semester) => (
                 <option key={semester} value={semester}>
                   {semester} семестр
                 </option>
               ))}
-            </select>
+            </FilterSelect>
           </label>
           <label>
             Аттестация
-            <select name="type" defaultValue={filters.type}>
+            <FilterSelect name="type" value={filters.type}>
               <option value="">Все виды</option>
               {types.map((type) => (
                 <option key={type}>{type}</option>
               ))}
-            </select>
+            </FilterSelect>
           </label>
           <label>
             Порядок
-            <select name="sort" defaultValue={sort}>
+            <FilterSelect name="sort" value={sort}>
               {sorts.map(({ id, label }) => (
                 <option key={id} value={id}>
                   {label}
                 </option>
               ))}
-            </select>
+            </FilterSelect>
           </label>
           <div className={s.actions}>
             <Button type="submit" variant="primary">
@@ -365,7 +366,7 @@ export default async function ResultsPage({
               </Link>
             )}
           </div>
-        </form>
+        </FilterForm>
       </div>
       <section aria-label="Результаты" className={s.results}>
         {results.length > 0 ? (
@@ -399,7 +400,7 @@ export default async function ResultsPage({
               hasFilters ? (
                 <ActionLink href={resetHref}>Сбросить фильтры</ActionLink>
               ) : status !== "all" && buckets.all.length > 0 ? (
-                <ActionLink href={resultHref({ sort: urlSort })}>
+                <ActionLink href={filterHref(path, { sort: urlSort })}>
                   Все результаты
                 </ActionLink>
               ) : undefined

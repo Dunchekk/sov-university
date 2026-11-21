@@ -8,39 +8,47 @@ import {
   Tabs,
   Badge,
   Empty,
+  ActionLink,
   ui,
 } from "@/shared/ui/primitives";
+import { FilterForm, FilterSelect, FilterText } from "@/shared/ui/FilterForm";
+import {
+  containsText,
+  filterPage,
+  filterValue,
+  type FilterParams,
+} from "@/shared/lib/filters";
+import { catalog } from "@/modules/requests/catalog";
 import { statusLabel } from "@/shared/config/statuses";
 import { formatDate } from "@/shared/lib/time";
+const path = "/services";
+const categories = [...new Set(catalog.map((service) => service.category))];
 export default async function ServicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    tab?: string;
-    q?: string;
-    category?: string;
-    page?: string;
-  }>;
+  searchParams: Promise<FilterParams>;
 }) {
   const student = await pageStudent();
   const p = await searchParams;
-  const query = (p.q ?? "").slice(0, 80);
-  const page = Math.max(1, Number(p.page) || 1);
+  const query = filterValue(p.q).trim().slice(0, 80);
+  const category = categories.find(
+    (value) => value === filterValue(p.category),
+  );
+  const tab = filterValue(p.tab) === "requests" ? "requests" : "catalog";
+  const page = filterPage(p.page);
+  const contains = containsText(query);
   const [services, requests, count] = await Promise.all([
-    p.tab === "requests"
+    tab === "requests"
       ? []
       : db.service.findMany({
           where: {
             active: true,
-            ...(p.category ? { category: p.category } : {}),
-            OR: [
-              { title: { contains: query, mode: "insensitive" } },
-              { keywords: { contains: query, mode: "insensitive" } },
-            ],
+            category,
+            OR: [{ title: contains }, { keywords: contains }],
           },
           orderBy: { title: "asc" },
         }),
-    p.tab === "requests"
+    tab === "requests"
       ? db.studentRequest.findMany({
           where: { studentId: student.id },
           include: { service: { select: { title: true, slug: true } } },
@@ -58,7 +66,7 @@ export default async function ServicesPage({
         description="Нужный документ — без лишних формальностей."
       />
       <Tabs
-        active={p.tab ?? "catalog"}
+        active={tab}
         items={[
           { id: "catalog", label: "Каталог услуг", href: "/services" },
           {
@@ -68,7 +76,7 @@ export default async function ServicesPage({
           },
         ]}
       />
-      {p.tab === "requests" ? (
+      {tab === "requests" ? (
         <Card>
           {requests.map((r) => (
             <Link
@@ -115,7 +123,7 @@ export default async function ServicesPage({
                 Назад
               </Link>
             )}
-            {page * 20 < count && (
+            {page < 100 && page * 20 < count && (
               <Link
                 className={ui.button}
                 href={`/services?tab=requests&page=${page + 1}`}
@@ -127,32 +135,27 @@ export default async function ServicesPage({
         </Card>
       ) : (
         <div className={ui.stack}>
-          <form className={ui.filterBar}>
+          <FilterForm action={path} className={ui.filterBar}>
             <label>
               Что нужно?
-              <input
+              <FilterText
                 name="q"
-                defaultValue={query}
+                value={query}
+                maxLength={80}
                 placeholder="Для работы, оценки, оплата…"
               />
             </label>
             <label>
               Категория
-              <select name="category" defaultValue={p.category ?? ""}>
+              <FilterSelect name="category" value={category ?? ""}>
                 <option value="">Все услуги</option>
-                {[
-                  "Обучение",
-                  "Результаты",
-                  "Финансы",
-                  "Документы",
-                  "Обращения",
-                ].map((v) => (
+                {categories.map((v) => (
                   <option key={v}>{v}</option>
                 ))}
-              </select>
+              </FilterSelect>
             </label>
             <button className={ui.button}>Найти</button>
-          </form>
+          </FilterForm>
           <div className={ui.grid3}>
             {services.map((service) => (
               <Card key={service.slug}>
@@ -184,6 +187,11 @@ export default async function ServicesPage({
             <Empty
               title="Услуги не найдены"
               description="Попробуйте другое назначение документа."
+              action={
+                query || category ? (
+                  <ActionLink href={path}>Сбросить фильтры</ActionLink>
+                ) : undefined
+              }
             />
           )}
           <Card>

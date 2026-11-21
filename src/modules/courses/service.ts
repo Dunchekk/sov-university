@@ -1,4 +1,5 @@
 import { db } from "@/server/db";
+import { containsText } from "@/shared/lib/filters";
 import { requireEnrollment, type StudentContext } from "@/server/access";
 import type { Prisma } from "@/generated/prisma/client";
 import {
@@ -99,10 +100,14 @@ export async function courseResult(student: StudentContext, courseId: string) {
 }
 export async function myCourses(
   student: StudentContext,
-  filter: Pick<Prisma.EnrollmentWhereInput, "status"> = {},
+  filter: Pick<Prisma.EnrollmentWhereInput, "status" | "course"> = {},
 ) {
   const enrollments = await db.enrollment.findMany({
-    where: { studentId: student.id, status: filter.status },
+    where: {
+      studentId: student.id,
+      status: filter.status,
+      course: filter.course,
+    },
     include: { course: { include: { lecturer: true } } },
   });
   return loadCourseResults(student, enrollments);
@@ -117,13 +122,18 @@ export async function roster(
   await requireEnrollment(student, courseId);
   const groups = await db.lesson.findMany({
     where: { courseId },
-    select: { groupId: true },
+    select: { group: { select: { id: true, name: true } } },
     distinct: ["groupId"],
   });
-  const ids = groups.map((g) => g.groupId);
+  const choices = groups
+    .map(({ group }) => group)
+    .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+  const ids = choices.map((candidate) => candidate.id);
   const where = {
-    groupId: { in: group && ids.includes(group) ? [group] : ids },
-    name: { contains: q.slice(0, 80), mode: "insensitive" as const },
+    groupId: {
+      in: group ? ids.filter((candidate) => candidate === group) : ids,
+    },
+    name: containsText(q.slice(0, 80)),
   };
   const [items, total] = await Promise.all([
     db.rosterPerson.findMany({
@@ -135,5 +145,5 @@ export async function roster(
     }),
     db.rosterPerson.count({ where }),
   ]);
-  return { items, total };
+  return { items, total, groups: choices };
 }

@@ -1,17 +1,29 @@
 import Link from "next/link";
 import { pageStudent } from "@/server/access";
 import { db } from "@/server/db";
-import { PageTitle, Card, Badge, Tabs, ui } from "@/shared/ui/primitives";
+import {
+  PageTitle,
+  Card,
+  Badge,
+  Tabs,
+  Empty,
+  ui,
+} from "@/shared/ui/primitives";
+import { filterValue, type FilterParams } from "@/shared/lib/filters";
 export default async function CurriculumPage({
   searchParams,
 }: {
-  searchParams: Promise<{ semester?: string }>;
+  searchParams: Promise<FilterParams>;
 }) {
   const student = await pageStudent();
   const p = await searchParams;
+  const selected = Number(filterValue(p.semester));
   const semester = Math.min(
     8,
-    Math.max(1, Number(p.semester) || student.currentSemester),
+    Math.max(
+      1,
+      (Number.isInteger(selected) && selected) || student.currentSemester,
+    ),
   );
   const [items, enrollments] = await Promise.all([
     db.curriculumItem.findMany({
@@ -31,6 +43,7 @@ export default async function CurriculumPage({
   const credited = items
     .filter((i) => i.courseId && done.has(i.courseId))
     .reduce((sum, i) => sum + i.credits, 0);
+  const semesterItems = items.filter((item) => item.semester === semester);
   return (
     <>
       <PageTitle
@@ -72,22 +85,21 @@ export default async function CurriculumPage({
           href: `/studies/curriculum?semester=${i + 1}`,
         }))}
       />
-      <Card>
-        <div className={ui.tableWrap}>
-          <table>
-            <thead>
-              <tr>
-                <th>Дисциплина / работа</th>
-                <th>Часть программы</th>
-                <th>Кредиты / часы</th>
-                <th>Контроль</th>
-                <th>Прогресс</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items
-                .filter((i) => i.semester === semester)
-                .map((i) => (
+      {semesterItems.length ? (
+        <Card>
+          <div className={ui.tableWrap}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Дисциплина / работа</th>
+                  <th>Часть программы</th>
+                  <th>Кредиты / часы</th>
+                  <th>Контроль</th>
+                  <th>Прогресс</th>
+                </tr>
+              </thead>
+              <tbody>
+                {semesterItems.map((i) => (
                   <tr key={i.id}>
                     <td>
                       {i.courseId &&
@@ -135,10 +147,13 @@ export default async function CurriculumPage({
                     </td>
                   </tr>
                 ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      ) : (
+        <Empty title="На этот семестр пока нет дисциплин" />
+      )}
     </>
   );
 }

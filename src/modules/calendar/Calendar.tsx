@@ -1,5 +1,12 @@
 "use client";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useOptimistic,
+  useState,
+  useTransition,
+  type CSSProperties,
+} from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -95,6 +102,8 @@ export function Calendar({
     path = usePathname(),
     params = useSearchParams();
   const [connectionsOpen, setConnectionsOpen] = useState(false);
+  const [visibleTypes, setVisibleTypes] = useOptimistic(types);
+  const [filterPending, startFilter] = useTransition();
   const [connectionsOpening, setConnectionsOpening] = useState(0);
   const [comparison, setComparison] = useState<"unopened" | "open" | "closed">(
     "unopened",
@@ -115,10 +124,17 @@ export function Calendar({
       ),
     [from, view],
   );
+  const filteredEvents = useMemo(
+    () =>
+      visibleTypes === types
+        ? events
+        : events.filter((event) => visibleTypes.includes(event.type)),
+    [events, types, visibleTypes],
+  );
   const dayEvents = useMemo(
     () =>
       days.map((day) => {
-        const eventsForDay = eventsOnDay(events, day);
+        const eventsForDay = eventsOnDay(filteredEvents, day);
         return {
           day,
           events: eventsForDay,
@@ -126,7 +142,7 @@ export function Calendar({
           timed: view === "month" ? [] : timedLayout(eventsForDay, day),
         };
       }),
-    [days, events, view],
+    [days, filteredEvents, view],
   );
   const today = dateKey(currentTime);
   const urlDate = params.get("date");
@@ -172,6 +188,14 @@ export function Calendar({
         !!values.date,
       );
     else commit();
+  };
+  const applyTypes = (next: string[]) => {
+    startFilter(() => {
+      setVisibleTypes(next);
+      change({
+        types: next.length === eventTypes.length ? null : next.join(","),
+      });
+    });
   };
   useEffect(() => {
     const update = () => setCurrentTime(new Date().toISOString());
@@ -242,7 +266,11 @@ export function Calendar({
   return (
     <>
       <div className={s.workspace} data-calendar-workspace>
-        <section className={s.schedulePanel} aria-label="Календарь занятий">
+        <section
+          className={s.schedulePanel}
+          aria-label="Календарь занятий"
+          aria-busy={filterPending}
+        >
           <div className={s.scheduleHeading}>
             <h1>Календарь</h1>
             <p aria-label="Видимые даты">
@@ -479,13 +507,13 @@ export function Calendar({
               <label key={type} className={s.filter}>
                 <input
                   type="checkbox"
-                  checked={types.includes(type)}
-                  onChange={() =>
-                    change({
-                      types: types.includes(type)
-                        ? types.filter((t) => t !== type).join(",")
-                        : [...types, type].join(","),
-                    })
+                  checked={visibleTypes.includes(type)}
+                  onChange={(event) =>
+                    applyTypes(
+                      event.target.checked
+                        ? [...visibleTypes, type]
+                        : visibleTypes.filter((value) => value !== type),
+                    )
                   }
                 />
                 <span className={s.filterLabel} data-type={type}>

@@ -1,21 +1,57 @@
 import Link from "next/link";
 import { pageStudent } from "@/server/access";
 import { db } from "@/server/db";
-import { PageTitle, Card, Badge, Empty, ui } from "@/shared/ui/primitives";
+import {
+  PageTitle,
+  Card,
+  Badge,
+  Empty,
+  ActionLink,
+  ui,
+} from "@/shared/ui/primitives";
+import {
+  FilterCheckbox,
+  FilterForm,
+  FilterSelect,
+} from "@/shared/ui/FilterForm";
+import {
+  filterHref,
+  filterPage,
+  filterValue,
+  type FilterParams,
+} from "@/shared/lib/filters";
 import { ReadNotification } from "@/modules/community/ReadNotification";
 import { formatDate } from "@/shared/lib/time";
+const path = "/notifications";
+const categories = [
+  ["SCHEDULE", "Расписание"],
+  ["CALENDAR", "Календарь"],
+  ["STUDY", "Учёба"],
+  ["REQUEST", "Обращения"],
+  ["COMMUNITY", "Сообщество"],
+] as const;
 export default async function NotificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; unread?: string; page?: string }>;
+  searchParams: Promise<FilterParams>;
 }) {
   const student = await pageStudent();
   const p = await searchParams;
-  const page = Math.max(1, Math.min(100, Number(p.page) || 1));
+  const page = filterPage(p.page);
+  const category = categories.find(
+    ([value]) => value === filterValue(p.category),
+  )?.[0];
+  const unread = filterValue(p.unread) === "true";
+  const paged = (page: number) =>
+    filterHref(path, {
+      category,
+      unread: unread ? "true" : undefined,
+      page: page > 1 ? page : undefined,
+    });
   const where = {
     studentId: student.id,
-    ...(p.category ? { category: p.category } : {}),
-    ...(p.unread === "true" ? { readAt: null } : {}),
+    category,
+    ...(unread ? { readAt: null } : {}),
   };
   const [items, total] = await Promise.all([
     db.notification.findMany({
@@ -33,34 +69,24 @@ export default async function NotificationsPage({
         description="Всё, что изменилось и требует твоего внимания."
         action={<ReadNotification />}
       />
-      <form className={ui.filterBar}>
+      <FilterForm action={path} className={ui.filterBar}>
         <label>
           Категория
-          <select name="category" defaultValue={p.category ?? ""}>
+          <FilterSelect name="category" value={category ?? ""}>
             <option value="">Все</option>
-            {[
-              ["SCHEDULE", "Расписание"],
-              ["STUDY", "Учёба"],
-              ["REQUEST", "Обращения"],
-              ["COMMUNITY", "Сообщество"],
-            ].map(([v, l]) => (
+            {categories.map(([v, l]) => (
               <option value={v} key={v}>
                 {l}
               </option>
             ))}
-          </select>
+          </FilterSelect>
         </label>
         <label className={ui.row}>
-          <input
-            type="checkbox"
-            name="unread"
-            value="true"
-            defaultChecked={p.unread === "true"}
-          />
+          <FilterCheckbox name="unread" checked={unread} />
           Только непрочитанные
         </label>
         <button className={ui.button}>Показать</button>
-      </form>
+      </FilterForm>
       <Card>
         {items.map((n) => (
           <div key={n.id} className={`${ui.between} ${ui.listItem}`}>
@@ -91,24 +117,26 @@ export default async function NotificationsPage({
         ))}
         {!items.length && (
           <Empty
-            title="Всё прочитано"
-            description="Новые события появятся здесь."
+            title={
+              category || unread
+                ? "Нет уведомлений по фильтрам"
+                : "Уведомлений пока нет"
+            }
+            action={
+              category || unread ? (
+                <ActionLink href={path}>Сбросить фильтры</ActionLink>
+              ) : undefined
+            }
           />
         )}
         <div className={ui.row}>
           {page > 1 && (
-            <Link
-              className={ui.button}
-              href={`/notifications?page=${page - 1}`}
-            >
+            <Link className={ui.button} href={paged(page - 1)}>
               Назад
             </Link>
           )}
-          {page * 20 < total && (
-            <Link
-              className={ui.button}
-              href={`/notifications?page=${page + 1}`}
-            >
+          {page < 100 && page * 20 < total && (
+            <Link className={ui.button} href={paged(page + 1)}>
               Далее
             </Link>
           )}

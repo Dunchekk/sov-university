@@ -20,13 +20,14 @@ export function SchedulePicker({
   useEffect(() => {
     const c = new AbortController();
     const timer = setTimeout(() => {
-      fetch(`/api/schedules/search?q=${encodeURIComponent(q)}`, {
+      api<Schedule[]>(`/api/schedules/search?q=${encodeURIComponent(q)}`, {
         signal: c.signal,
       })
-        .then((r) => r.json())
-        .then(setItems)
-        .catch((e) => {
-          if (e.name !== "AbortError") setError("Не удалось найти расписания.");
+        .then((items) => {
+          if (!c.signal.aborted) setItems(items);
+        })
+        .catch(() => {
+          if (!c.signal.aborted) setError("Не удалось найти расписания.");
         });
     }, 250);
     return () => {

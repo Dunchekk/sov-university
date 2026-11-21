@@ -1,3 +1,4 @@
+import { containsText } from "@/shared/lib/filters";
 import { db } from "@/server/db";
 import type { StudentContext } from "@/server/access";
 import { communityAudience } from "@/modules/community/service";
@@ -30,7 +31,7 @@ export async function search(
 ): Promise<SearchResult[]> {
   const term = q.trim().slice(0, 80);
   if (term.length < 2) return [];
-  const contains = { contains: term, mode: "insensitive" as const };
+  const contains = containsText(term);
   const includes = (category: SearchScope) =>
     scope === "all" || scope === category;
   const own = { studentId: student.id };

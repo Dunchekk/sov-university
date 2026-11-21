@@ -1,20 +1,23 @@
+import { containsText } from "@/shared/lib/filters";
 import { route } from "@/server/http";
 import { db } from "@/server/db";
 export const GET = route(async (request) => {
-  const q = (new URL(request.url).searchParams.get("q") ?? "").slice(0, 80);
+  const name = containsText(
+    (new URL(request.url).searchParams.get("q") ?? "").trim().slice(0, 80),
+  );
   const [groups, lecturers, rooms] = await Promise.all([
     db.group.findMany({
-      where: { name: { contains: q, mode: "insensitive" } },
+      where: { name },
       take: 8,
       select: { id: true, name: true },
     }),
     db.person.findMany({
-      where: { name: { contains: q, mode: "insensitive" } },
+      where: { name },
       take: 8,
       select: { id: true, name: true },
     }),
     db.room.findMany({
-      where: { name: { contains: q, mode: "insensitive" } },
+      where: { name },
       take: 8,
       select: { id: true, name: true, building: true },
     }),

@@ -5,16 +5,11 @@ import { invariant, notFound } from "@/server/errors";
 import type { StudentContext } from "@/server/access";
 import { idempotent } from "@/server/idempotency";
 import { notify } from "@/modules/notifications";
+import { achievementCategories } from "./categories";
 export const achievementFields = z
   .object({
     title: z.string().trim().min(1).max(180),
-    category: z.enum([
-      "Учёба",
-      "Наука",
-      "Творчество",
-      "Спорт",
-      "Общественная деятельность",
-    ]),
+    category: z.enum(achievementCategories),
     date: z.iso.date(),
     description: z.string().max(2000),
     organizer: z.string().max(200),

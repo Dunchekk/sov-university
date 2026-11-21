@@ -3,26 +3,39 @@ import { ArrowUpRight } from "lucide-react";
 import { pageStudent } from "@/server/access";
 import { myCourses } from "@/modules/courses/service";
 import { AttendanceIndicator } from "@/modules/assessment/AttendanceIndicator";
-import { Card, PageTitle, Tabs, Empty, ui } from "@/shared/ui/primitives";
+import {
+  Card,
+  PageTitle,
+  Tabs,
+  Empty,
+  ActionLink,
+  ui,
+} from "@/shared/ui/primitives";
+import { FilterForm, FilterText } from "@/shared/ui/FilterForm";
+import {
+  containsText,
+  filterHref,
+  filterValue,
+  type FilterParams,
+} from "@/shared/lib/filters";
 import { formatDate } from "@/shared/lib/time";
 import s from "./courses.module.css";
+const path = "/studies/courses";
 
 export default async function CoursesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ semester?: string; q?: string }>;
+  searchParams: Promise<FilterParams>;
 }) {
   const student = await pageStudent();
   const params = await searchParams;
-  const semester = params.semester === "past" ? "past" : "current";
+  const semester = filterValue(params.semester) === "past" ? "past" : "current";
   const past = semester === "past";
-  const enrolled = await myCourses(student, {
+  const query = filterValue(params.q).trim().slice(0, 80);
+  const courses = await myCourses(student, {
     status: past ? "COMPLETED" : { not: "COMPLETED" },
+    course: query ? { name: containsText(query) } : undefined,
   });
-  const query = (params.q ?? "").toLowerCase();
-  const courses = enrolled.filter(({ enrollment }) =>
-    enrollment.course.name.toLowerCase().includes(query),
-  );
   const plural = new Intl.PluralRules("ru").select(courses.length);
   const countLabel =
     plural === "one"
@@ -40,26 +53,31 @@ export default async function CoursesPage({
       <Tabs
         active={semester}
         items={[
-          { id: "current", label: "Текущий семестр", href: "/studies/courses" },
+          {
+            id: "current",
+            label: "Текущий семестр",
+            href: filterHref(path, { q: query }),
+          },
           {
             id: "past",
             label: "Завершённые",
-            href: "/studies/courses?semester=past",
+            href: filterHref(path, { semester: "past", q: query }),
           },
         ]}
       />
-      <form className={ui.filterBar}>
+      <FilterForm action={path} className={ui.filterBar}>
         <input type="hidden" name="semester" value={semester} />
         <label className={ui.form}>
           Поиск дисциплины
-          <input
+          <FilterText
             name="q"
-            defaultValue={params.q}
+            value={query}
+            maxLength={80}
             placeholder="Название дисциплины"
           />
         </label>
         <button className={ui.button}>Найти</button>
-      </form>
+      </FilterForm>
       <div className={ui.stack}>
         <p className={ui.caption}>
           {courses.length} {countLabel}
@@ -127,6 +145,17 @@ export default async function CoursesPage({
           <Empty
             title="Дисциплины не найдены"
             description="Измените поиск или семестр."
+            action={
+              query ? (
+                <ActionLink
+                  href={filterHref(path, {
+                    semester: past ? "past" : undefined,
+                  })}
+                >
+                  Сбросить поиск
+                </ActionLink>
+              ) : undefined
+            }
           />
         )}
       </div>

@@ -5,6 +5,7 @@ import { Button, ui } from "@/shared/ui/primitives";
 import { FileUpload } from "@/shared/ui/FileUpload";
 import { api, ApiError, operationKey } from "@/shared/lib/client";
 import { dateKey } from "@/shared/lib/time";
+import { achievementCategories } from "./categories";
 export function AchievementForm({
   initial,
 }: {
@@ -133,13 +134,7 @@ export function AchievementForm({
           <label>
             Категория
             <select name="category" defaultValue={initial?.category ?? "Учёба"}>
-              {[
-                "Учёба",
-                "Наука",
-                "Творчество",
-                "Спорт",
-                "Общественная деятельность",
-              ].map((v) => (
+              {achievementCategories.map((v) => (
                 <option key={v}>{v}</option>
               ))}
             </select>

@@ -7,6 +7,8 @@ import { courseResult, roster } from "@/modules/courses/service";
 import { GradeBreakdown } from "@/modules/assessment/GradeBreakdown";
 import { AttendanceIndicator } from "@/modules/assessment/AttendanceIndicator";
 import { Roster } from "@/modules/courses/Roster";
+import { rosterFilters } from "@/modules/courses/roster-filters";
+import { filterValue, type FilterParams } from "@/shared/lib/filters";
 import { CourseMaterials } from "@/modules/courses/CourseMaterials";
 import { courseMaterialTypes } from "@/modules/courses/materials";
 import {
@@ -18,16 +20,26 @@ import {
   ui,
 } from "@/shared/ui/primitives";
 import { formatDate, formatTime, dateKey } from "@/shared/lib/time";
+const tabs = [
+  ["overview", "Обзор"],
+  ["materials", "Материалы и задания"],
+  ["assessment", "Оценивание"],
+  ["people", "Участники"],
+  ["lessons", "Занятия"],
+] as const;
 export default async function CoursePage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<FilterParams>;
 }) {
   const student = await pageStudent();
   const { id } = await params;
-  const { tab = "overview" } = await searchParams;
+  const query = await searchParams;
+  const tab =
+    tabs.find(([id]) => id === filterValue(query.tab))?.[0] ?? "overview";
+  const participants = rosterFilters(query);
   const result = await pageData(courseResult(student, id));
   const course = result.enrollment.course;
   const [files, lessons, people] = await Promise.all([
@@ -60,7 +72,15 @@ export default async function CoursePage({
           take: 12,
         })
       : [],
-    tab === "people" ? roster(student, id) : null,
+    tab === "people"
+      ? roster(
+          student,
+          id,
+          participants.q,
+          participants.group || undefined,
+          participants.page,
+        )
+      : null,
   ]);
   return (
     <>
@@ -76,13 +96,7 @@ export default async function CoursePage({
       />
       <Tabs
         active={tab}
-        items={[
-          ["overview", "Обзор"],
-          ["materials", "Материалы и задания"],
-          ["assessment", "Оценивание"],
-          ["people", "Участники"],
-          ["lessons", "Занятия"],
-        ].map(([key, label]) => ({
+        items={tabs.map(([key, label]) => ({
           id: key,
           label,
           href: `/studies/courses/${id}?tab=${key}`,
@@ -92,7 +106,13 @@ export default async function CoursePage({
         <GradeBreakdown result={result} />
       ) : tab === "people" && people ? (
         <Card>
-          <Roster courseId={id} initial={people} teacher={course.lecturer} />
+          <Roster
+            key={id}
+            courseId={id}
+            initial={people}
+            initialFilters={participants}
+            teacher={course.lecturer}
+          />
         </Card>
       ) : tab === "materials" ? (
         <div className={ui.stack}>

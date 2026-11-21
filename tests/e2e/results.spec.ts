@@ -26,7 +26,13 @@ test("results combine filters, preserve them across tabs and keep retakes with t
   await semester.selectOption("2");
   await type.selectOption("Экзамен");
   await sort.selectOption("name");
-  await page.getByRole("button", { name: "Применить" }).click();
+  await expect(page).toHaveURL(
+    (url) =>
+      url.searchParams.get("course") === "course-debt" &&
+      url.searchParams.get("semester") === "2" &&
+      url.searchParams.get("type") === "Экзамен" &&
+      url.searchParams.get("sort") === "name",
+  );
   await expect(rows).toHaveCount(1);
   await expect(debt.getByRole("heading", { name: /Пересдача/ })).toBeVisible();
 

@@ -7,31 +7,43 @@ import {
   Tabs,
   Avatar,
   Empty,
+  ActionLink,
   ui,
 } from "@/shared/ui/primitives";
 import { CopyButton } from "@/shared/ui/CopyButton";
+import { FilterForm, FilterText } from "@/shared/ui/FilterForm";
+import {
+  containsText,
+  filterHref,
+  filterPage,
+  filterValue,
+  type FilterParams,
+} from "@/shared/lib/filters";
+const path = "/people";
 export default async function PeoplePage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; q?: string; page?: string }>;
+  searchParams: Promise<FilterParams>;
 }) {
   const student = await pageStudent();
   const p = await searchParams;
-  const tab = p.tab ?? "teachers";
-  const q = (p.q ?? "").slice(0, 80),
-    page = Math.max(1, Math.min(100, Number(p.page) || 1));
-  const contains = { contains: q, mode: "insensitive" as const };
+  const requestedTab = filterValue(p.tab);
+  const tab =
+    requestedTab === "group" || requestedTab === "departments"
+      ? requestedTab
+      : "teachers";
+  const q = filterValue(p.q).trim().slice(0, 80);
+  const page = filterPage(p.page);
+  const pageHref = (page: number) =>
+    filterHref(path, { tab, q, page: page > 1 ? page : undefined });
+  const contains = containsText(q);
   const [teachers, group, departments, total] = await Promise.all([
     tab === "teachers"
       ? db.person.findMany({
           where: {
-            ...(q
-              ? {}
-              : {
-                  courses: {
-                    some: { enrollments: { some: { studentId: student.id } } },
-                  },
-                }),
+            courses: {
+              some: { enrollments: { some: { studentId: student.id } } },
+            },
             OR: [
               { name: contains },
               { department: contains },
@@ -86,20 +98,25 @@ export default async function PeoplePage({
           ["teachers", "Мои преподаватели"],
           ["group", `Моя группа · ${student.group.name}`],
           ["departments", "Подразделения"],
-        ].map(([id, label]) => ({ id, label, href: `/people?tab=${id}` }))}
+        ].map(([id, label]) => ({
+          id,
+          label,
+          href: filterHref(path, { tab: id, q }),
+        }))}
       />
-      <form className={ui.filterBar}>
+      <FilterForm action={path} className={ui.filterBar}>
         <input type="hidden" name="tab" value={tab} />
         <label>
           Поиск
-          <input
+          <FilterText
             name="q"
-            defaultValue={q}
+            value={q}
+            maxLength={80}
             placeholder="Имя, дисциплина или подразделение"
           />
         </label>
         <button className={ui.button}>Найти</button>
-      </form>
+      </FilterForm>
       <div className={ui.grid2}>
         {teachers.map((t) => (
           <Card key={t.id}>
@@ -174,18 +191,12 @@ export default async function PeoplePage({
           </p>
           <div className={ui.row}>
             {page > 1 && (
-              <Link
-                className={ui.button}
-                href={`/people?tab=group&page=${page - 1}&q=${encodeURIComponent(q)}`}
-              >
+              <Link className={ui.button} href={pageHref(page - 1)}>
                 Назад
               </Link>
             )}
-            {page * 20 < total && (
-              <Link
-                className={ui.button}
-                href={`/people?tab=group&page=${page + 1}&q=${encodeURIComponent(q)}`}
-              >
+            {page < 100 && page * 20 < total && (
+              <Link className={ui.button} href={pageHref(page + 1)}>
                 Далее
               </Link>
             )}
@@ -196,6 +207,13 @@ export default async function PeoplePage({
         <Empty
           title="Никого не нашли"
           description="Попробуйте другое имя или название."
+          action={
+            q ? (
+              <ActionLink href={filterHref(path, { tab })}>
+                Сбросить поиск
+              </ActionLink>
+            ) : undefined
+          }
         />
       )}
     </>
