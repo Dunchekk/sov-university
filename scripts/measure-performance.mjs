@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { createServer } from "node:net";
 import { resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium, request } from "@playwright/test";
@@ -38,7 +39,7 @@ await readFile(resolve(standalone, "server.js"));
 function summary(samples) {
   const values = samples.toSorted((a, b) => a - b);
   const percentile = (p) =>
-    Math.round(values[Math.ceil(values.length * p) - 1]);
+    values.length ? Math.round(values[Math.ceil(values.length * p) - 1]) : null;
   return {
     samples: values.length,
     p50Ms: percentile(0.5),
@@ -130,7 +131,7 @@ async function measureLoad(sessions) {
   );
   const paths = ["/", ...routes.map(({ path }) => path)];
   const results = [];
-  for (const concurrency of [1, 10, 30]) {
+  for (const concurrency of [1, 10, 30, 60]) {
     const total = Math.max(30, concurrency * 6);
     const samples = [];
     let errors = 0;
@@ -177,6 +178,13 @@ async function awaitHealth(server) {
   }
   throw new Error("The standalone server did not become healthy.");
 }
+
+const portCheck = createServer();
+await new Promise((resolve, reject) => {
+  portCheck.once("error", reject);
+  portCheck.listen(port, "127.0.0.1", resolve);
+});
+await new Promise((resolve) => portCheck.close(resolve));
 
 const server = spawn(process.execPath, ["server.js"], {
   cwd: standalone,
