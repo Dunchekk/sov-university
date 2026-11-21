@@ -78,12 +78,27 @@ model LoginAttempt {
 }
 
 model Program {
-  id         String           @id
-  name       String
-  faculty    String
-  credits    Int              @default(240)
-  groups     Group[]
-  curriculum CurriculumItem[]
+  id            String           @id
+  name          String
+  faculty       String
+  credits       Int              @default(240)
+  groups        Group[]
+  curriculum    CurriculumItem[]
+  ratingCohorts RatingCohort[]
+}
+
+model RatingCohort {
+  programId        String
+  program          Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  academicYear     Int
+  studyYear        Int
+  referenceCredits Int
+  // Anonymous peer totals, normalized to referenceCredits, in hundredths.
+  scores           Int[]
+  publishedAt      DateTime
+  demo             Boolean  @default(false)
+
+  @@id([programId, academicYear, studyYear])
 }
 
 model Group {

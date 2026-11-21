@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { courseResult } from "@/modules/courses/service";
 import { AttendanceIndicator } from "./AttendanceIndicator";
 import { ResultHelp } from "./ResultHelp";
+import { isGraded } from "./domain";
 import { Card, Badge, ui } from "@/shared/ui/primitives";
 import { formatDate } from "@/shared/lib/time";
 import { statusLabel } from "@/shared/config/statuses";
@@ -234,7 +235,7 @@ function AssessmentTable({ assessments }: Pick<CourseResult, "assessments">) {
                 </td>
                 <td role="cell">{formatDate(a.dueAt)}</td>
                 <td role="cell">
-                  {r?.status === "PUBLISHED" && r.points !== null
+                  {isGraded(r?.status) && r?.points != null
                     ? `${r.points} / ${a.maxPoints}`
                     : `— / ${a.maxPoints}`}
                 </td>

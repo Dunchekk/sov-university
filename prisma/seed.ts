@@ -2,6 +2,7 @@ import "dotenv/config";
 import { academicExtras } from "./academic-extras";
 import { seedCommunity } from "./seed-community";
 import { seedCompletedCourses } from "./seed-completed-courses";
+import { seedAcademicEdition } from "./seed-academic-edition";
 import { seedCourseMaterials } from "./seed-course-materials";
 import { seedLecturers } from "./seed-lecturers";
 import { db } from "../src/server/db";
@@ -931,6 +932,7 @@ async function main() {
 main()
   .then(academicExtras)
   .then(seedCompletedCourses)
+  .then(seedAcademicEdition)
   .then(seedCourseMaterials)
   .then(async () => {
     const items = await db.achievement.findMany({

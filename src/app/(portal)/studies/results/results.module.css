@@ -68,6 +68,24 @@
 
 .result > .summary {
   margin: 0;
+  transition: background-color var(--motion);
+}
+
+.result {
+  transition:
+    background-color var(--motion),
+    box-shadow var(--motion);
+}
+
+.result > [data-animating] {
+  overflow: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result,
+  .result > .summary {
+    transition: none;
+  }
 }
 
 .result:last-child {

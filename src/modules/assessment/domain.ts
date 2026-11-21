@@ -67,6 +67,9 @@ export type AssessmentRow = {
   dueAt: Date;
   results: { points: number | null; status: string }[];
 };
+export function isGraded(status: string | undefined) {
+  return status === "PUBLISHED" || status === "CHECKED";
+}
 export function gradeSummary(
   assessments: AssessmentRow[],
   scheme: Scheme,
@@ -81,12 +84,10 @@ export function gradeSummary(
   for (const item of assessments) {
     maximum += item.maxPoints;
     const result = item.results[0];
-    if (result?.status === "PUBLISHED" && result.points !== null)
+    const graded = isGraded(result?.status);
+    if (graded && result?.points != null)
       points += Math.max(0, Math.min(item.maxPoints, result.points));
-    if (
-      item.mandatory &&
-      !["PUBLISHED", "SUBMITTED"].includes(result?.status ?? "")
-    ) {
+    if (item.mandatory && !graded && result?.status !== "SUBMITTED") {
       missing.push(item.title);
       if (item.dueAt < clock.now()) blockedMandatory.push(item.title);
     }

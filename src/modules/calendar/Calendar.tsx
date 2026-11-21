@@ -671,9 +671,11 @@ export function Calendar({
                   Состояние:{" "}
                   {selected.status === "PUBLISHED"
                     ? "Результат опубликован"
-                    : selected.status === "SUBMITTED"
-                      ? "Сдано, ожидает проверки"
-                      : "Срок и требования указаны в связанном разделе"}
+                    : selected.status === "CHECKED"
+                      ? "Проверено"
+                      : selected.status === "SUBMITTED"
+                        ? "Сдано, ожидает проверки"
+                        : "Срок и требования указаны в связанном разделе"}
                 </p>
               )}
               {selected.changes?.map((c) => (

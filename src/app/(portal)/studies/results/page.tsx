@@ -22,6 +22,7 @@ import {
   ui,
 } from "@/shared/ui/primitives";
 import s from "./results.module.css";
+import { ResultDisclosure } from "./ResultDisclosure";
 
 const path = "/studies/results";
 const tabs = [
@@ -99,57 +100,61 @@ function ResultRow({
           : "Условия допуска выполнены";
   const due = nextRetake ?? lastRetake;
   return (
-    <details className={s.result} open={expanded}>
-      <summary className={s.summary}>
-        <span className={s.discipline}>
-          <strong>{course.name}</strong>
-          <span className={ui.caption}>
-            {course.semester} семестр · {course.assessmentType}
-          </span>
-        </span>
-        <span className={s.points}>
-          <span className={s.mobileLabel}>Баллы</span>
-          <strong>
-            {grade.maximum ? `${grade.points} / ${grade.maximum}` : "—"}
-          </strong>
-        </span>
-        <span className={s.attendance}>
-          <span className={s.mobileLabel}>Посещаемость</span>
-          {attendance.percentage === null ? (
-            <span className={ui.caption}>Нет данных</span>
-          ) : (
-            <strong
-              className={
-                !completed && attendance.meets === false ? s.risk : undefined
-              }
-            >
-              {Math.round(attendance.percentage)}%
-            </strong>
-          )}
-        </span>
-        <span className={s.outcome}>
-          {completed && officialResult ? (
-            <>
-              <strong>{officialResult}</strong>
-              <span className={ui.caption}>{status}</span>
-            </>
-          ) : (
-            <Badge
-              tone={completed ? "success" : attention ? "warning" : "default"}
-            >
-              {status}
-            </Badge>
-          )}
-          {!completed && debt && due && (
+    <ResultDisclosure
+      expanded={expanded}
+      summary={
+        <>
+          <span className={s.discipline}>
+            <strong>{course.name}</strong>
             <span className={ui.caption}>
-              {nextRetake ? "" : "Дата прошла · "}
-              <time dateTime={due.startsAt.toISOString()}>
-                {formatDate(due.startsAt)} · {formatTime(due.startsAt)}
-              </time>
+              {course.semester} семестр · {course.assessmentType}
             </span>
-          )}
-        </span>
-      </summary>
+          </span>
+          <span className={s.points}>
+            <span className={s.mobileLabel}>Баллы</span>
+            <strong>
+              {grade.maximum ? `${grade.points} / ${grade.maximum}` : "—"}
+            </strong>
+          </span>
+          <span className={s.attendance}>
+            <span className={s.mobileLabel}>Посещаемость</span>
+            {attendance.percentage === null ? (
+              <span className={ui.caption}>Нет данных</span>
+            ) : (
+              <strong
+                className={
+                  !completed && attendance.meets === false ? s.risk : undefined
+                }
+              >
+                {Math.round(attendance.percentage)}%
+              </strong>
+            )}
+          </span>
+          <span className={s.outcome}>
+            {completed && officialResult ? (
+              <>
+                <strong>{officialResult}</strong>
+                <span className={ui.caption}>{status}</span>
+              </>
+            ) : (
+              <Badge
+                tone={completed ? "success" : attention ? "warning" : "default"}
+              >
+                {status}
+              </Badge>
+            )}
+            {!completed && debt && due && (
+              <span className={ui.caption}>
+                {nextRetake ? "" : "Дата прошла · "}
+                <time dateTime={due.startsAt.toISOString()}>
+                  {formatDate(due.startsAt)} · {formatTime(due.startsAt)}
+                </time>
+              </span>
+            )}
+          </span>
+        </>
+      }
+    >
       <div className={s.details}>
         {retakes.length > 0 && (
           <section className={s.retake}>
@@ -189,7 +194,7 @@ function ResultRow({
           </Link>
         </div>
       </div>
-    </details>
+    </ResultDisclosure>
   );
 }
 

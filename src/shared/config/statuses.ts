@@ -17,6 +17,7 @@ export const statuses: Record<string, string> = {
   EXPECTED: "Ожидается",
   ACCRUED: "Начислено",
   PUBLISHED: "Опубликовано",
+  CHECKED: "Проверено",
   UPCOMING: "Впереди",
   MISSING: "Не сдано",
   VOID: "Аннулировано",

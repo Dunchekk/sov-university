@@ -1,5 +1,43 @@
 import { expect, test } from "./fixtures";
 
+test("results show checked work and animate the native course disclosure", async ({
+  studentPage: page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/studies/results");
+  const region = page.getByRole("region", { name: "Результаты" });
+  const overview = region.locator(":scope > details > summary").filter({
+    hasText: "Доступность цифровых сервисов",
+  });
+  const report = await overview.evaluate((summary) => {
+    const panel = summary.nextElementSibling!;
+    (summary as HTMLElement).click();
+    const animation = panel.getAnimations()[0];
+    return {
+      duration: animation?.effect?.getTiming().duration,
+      open: (summary.parentElement as HTMLDetailsElement).open,
+    };
+  });
+  expect(report).toEqual({ duration: 220, open: true });
+  const course = overview.locator("..");
+  await expect(
+    course.getByRole("row", { name: /Аудит интерактивной формы/ }),
+  ).toContainText("Проверено");
+  await expect(
+    course.getByRole("row", { name: /Аудит интерактивной формы/ }),
+  ).toContainText("30 / 35");
+  await overview.press("Enter");
+  await expect(course).toHaveJSProperty("open", false);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await overview.press("Enter");
+  await expect(course).toHaveJSProperty("open", true);
+  expect(
+    await course
+      .locator(":scope > div")
+      .evaluate((el) => el.getAnimations().length),
+  ).toBe(0);
+});
+
 test("results combine filters, preserve them across tabs and keep retakes with their course", async ({
   studentPage: page,
 }) => {

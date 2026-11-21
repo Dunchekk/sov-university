@@ -29,6 +29,7 @@ import s from "./shell.module.css";
 const study = [
   ["/studies/courses", "Дисциплины"],
   ["/studies/results", "Оценки и посещаемость"],
+  ["/studies/rating", "Рейтинг"],
   ["/studies/curriculum", "Учебный план"],
   ["/studies/projects", "Практика и проекты"],
   ["/studies/achievements", "Достижения"],

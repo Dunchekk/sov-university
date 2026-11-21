@@ -84,6 +84,29 @@ describe("attendance", () => {
 });
 describe("grades", () => {
   const a = attendanceStats(rows(7, 3), scheme, 6, clock);
+  it("counts points for checked work and satisfies its mandatory requirement", () => {
+    const result = gradeSummary(
+      [
+        {
+          id: "checked",
+          title: "Проверенная работа",
+          maxPoints: 100,
+          mandatory: true,
+          dueAt: lesson.endsAt,
+          results: [{ points: 84, status: "CHECKED" }],
+        },
+      ],
+      scheme,
+      a,
+      clock,
+    );
+    expect(result).toMatchObject({
+      points: 84,
+      missing: [],
+      remaining: 0,
+      admitted: true,
+    });
+  });
   it("expired mandatory work prevents ordinary pass despite enough points", () => {
     const result = gradeSummary(
       [

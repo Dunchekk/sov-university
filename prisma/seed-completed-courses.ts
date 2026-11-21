@@ -5,6 +5,7 @@ import {
   schemeSchema,
 } from "../src/modules/assessment/domain";
 import { addDays, atTime } from "../src/shared/lib/time";
+import { academicYear } from "../src/modules/rating/domain";
 
 type DemoCourse = readonly [
   code: string,
@@ -14,6 +15,7 @@ type DemoCourse = readonly [
   description: string,
   assessment: string,
   points: number,
+  credits: number,
 ];
 
 const common: DemoCourse[] = [
@@ -25,6 +27,7 @@ const common: DemoCourse[] = [
     "Структура аргумента, работа с источниками и редактирование учебных текстов.",
     "Аргументированное эссе",
     87,
+    3,
   ],
   [
     "GEN-102",
@@ -34,6 +37,7 @@ const common: DemoCourse[] = [
     "Векторы, матрицы, системы линейных уравнений и их применение.",
     "Решение задач по линейной алгебре",
     83,
+    5,
   ],
   [
     "GEN-103",
@@ -43,6 +47,7 @@ const common: DemoCourse[] = [
     "Чтение научных текстов, подготовка аннотаций и выступлений.",
     "Презентация по научной статье",
     92,
+    3,
   ],
   [
     "GEN-104",
@@ -52,6 +57,37 @@ const common: DemoCourse[] = [
     "Описание выборок, оценка параметров и проверка гипотез.",
     "Анализ данных опроса",
     89,
+    4,
+  ],
+  [
+    "GEN-105",
+    "История визуальных медиа",
+    1,
+    22,
+    "Как фотография, плакат и кино меняли публичную коммуникацию.",
+    "Разбор фотоархива",
+    89,
+    3,
+  ],
+  [
+    "GEN-106",
+    "Логика и аргументация",
+    1,
+    16,
+    "Проверка аргументов, работа с контрпримерами и структурирование спора.",
+    "Письменный разбор дискуссии",
+    84,
+    3,
+  ],
+  [
+    "GEN-107",
+    "Введение в проектную работу",
+    2,
+    25,
+    "Расстановка приоритетов, оценка рисков и планирование первой итерации.",
+    "План пробного проекта",
+    93,
+    4,
   ],
 ];
 
@@ -64,6 +100,7 @@ const design: DemoCourse[] = [
     "Визуальная иерархия, композиция и работа с цветом.",
     "Серия плакатов для выставки",
     96,
+    5,
   ],
   [
     "DP-102",
@@ -73,6 +110,7 @@ const design: DemoCourse[] = [
     "Школы дизайна и развитие графики и предметной среды в XX веке.",
     "Сравнительный анализ двух школ дизайна",
     86,
+    4,
   ],
   [
     "DP-103",
@@ -82,6 +120,7 @@ const design: DemoCourse[] = [
     "Шрифтовые пары, модульные сетки и вёрстка многостраничных изданий.",
     "Вёрстка журнального разворота",
     91,
+    4,
   ],
   [
     "DP-104",
@@ -91,6 +130,7 @@ const design: DemoCourse[] = [
     "Внимание, память и закономерности зрительного восприятия.",
     "Разбор визуальных сценариев",
     88,
+    3,
   ],
   [
     "DP-105",
@@ -100,6 +140,7 @@ const design: DemoCourse[] = [
     "Понятное представление сложных данных в таблицах, схемах и графиках.",
     "Инфографика о городской среде",
     94,
+    5,
   ],
   [
     "DP-106",
@@ -109,6 +150,27 @@ const design: DemoCourse[] = [
     "Пользовательские сценарии, интерактивные прототипы и проверка гипотез.",
     "Прототип сервиса записи",
     95,
+    6,
+  ],
+  [
+    "DP-107",
+    "Цвет и свет в цифровой среде",
+    1,
+    8,
+    "Контраст, цветовые системы и работа с изображениями для экрана.",
+    "Разработка системы цветов",
+    95,
+    4,
+  ],
+  [
+    "DP-108",
+    "Методы дизайн-исследования",
+    2,
+    3,
+    "Полевое наблюдение, сценарий интервью и анализ полученного материала.",
+    "Протокол полевого исследования",
+    90,
+    5,
   ],
 ];
 
@@ -121,6 +183,7 @@ const engineering: DemoCourse[] = [
     "Базовые алгоритмы, функции, работа с файлами и тестирование.",
     "Консольное приложение для обработки данных",
     93,
+    5,
   ],
   [
     "PI-102",
@@ -130,6 +193,7 @@ const engineering: DemoCourse[] = [
     "Множества, логика, комбинаторика и графы.",
     "Задачи по комбинаторике и графам",
     87,
+    4,
   ],
   [
     "PI-103",
@@ -139,6 +203,7 @@ const engineering: DemoCourse[] = [
     "Наборы команд, организация памяти и взаимодействие компонентов компьютера.",
     "Разбор программы на ассемблере",
     85,
+    4,
   ],
   [
     "PI-104",
@@ -148,6 +213,7 @@ const engineering: DemoCourse[] = [
     "Инкапсуляция, композиция и проектирование интерфейсов классов.",
     "Проект каталога библиотеки",
     91,
+    5,
   ],
   [
     "PI-105",
@@ -157,6 +223,7 @@ const engineering: DemoCourse[] = [
     "Проектирование тестов, граничные случаи и автоматизация проверок.",
     "Набор тестов для веб-сервиса",
     96,
+    4,
   ],
   [
     "PI-106",
@@ -166,6 +233,27 @@ const engineering: DemoCourse[] = [
     "Пределы, производные и интегралы в прикладных задачах.",
     "Задачи на дифференцирование и интегрирование",
     82,
+    5,
+  ],
+  [
+    "PI-107",
+    "Основы системного анализа",
+    1,
+    11,
+    "Модели предметной области и требования к небольшим системам.",
+    "Схема требований к сервису",
+    88,
+    4,
+  ],
+  [
+    "PI-108",
+    "Прикладная комбинаторика",
+    2,
+    7,
+    "Подсчёт вариантов, рекуррентные формулы и применение графов.",
+    "Задачи о связности графов",
+    92,
+    5,
   ],
 ];
 
@@ -176,13 +264,19 @@ export async function seedCompletedCourses() {
   ]);
   const scheme = schemeSchema.parse(reference.scheme);
   const attendance = attendanceStats([], scheme, 0);
+  const previousYear = academicYear(initial.baseDate) - 1;
+  const designProgram = { programId: "design", studentId: "student-a" };
+  const engineeringProgram = {
+    programId: "engineering",
+    studentId: "student-b",
+  };
   const groups = [
-    { courses: common, students: ["student-a", "student-b"] },
-    { courses: design, students: ["student-a"] },
-    { courses: engineering, students: ["student-b"] },
+    { courses: common, audience: [designProgram, engineeringProgram] },
+    { courses: design, audience: [designProgram] },
+    { courses: engineering, audience: [engineeringProgram] },
   ];
 
-  for (const { courses, students } of groups) {
+  for (const { courses, audience } of groups) {
     for (const [
       code,
       name,
@@ -191,10 +285,12 @@ export async function seedCompletedCourses() {
       description,
       title,
       points,
+      credits,
     ] of courses) {
       const courseId = `course-archive-${code.toLowerCase()}`;
       const assessmentId = `assessment-${courseId}`;
-      const base = addDays(initial.baseDate, semester === 1 ? -300 : -150);
+      const base =
+        semester === 1 ? `${previousYear}-12-19` : `${previousYear + 1}-06-12`;
       const dueAt = atTime(base, "18:00");
       const publishedAt = atTime(addDays(base, 2), "10:00");
       const assessment = {
@@ -236,7 +332,22 @@ export async function seedCompletedCourses() {
               "Итоговая работа завершена и проверена преподавателем.",
           },
         }),
-        ...students.flatMap((studentId) => {
+        db.curriculumItem.createMany({
+          data: audience.map(({ programId }) => ({
+            id: `plan-${programId}-${courseId}`,
+            programId,
+            courseId,
+            semester,
+            title: name,
+            category: "Обязательная часть",
+            credits,
+            hours: credits * 36,
+            assessmentType: "Экзамен",
+            description,
+          })),
+          skipDuplicates: true,
+        }),
+        ...audience.flatMap(({ studentId }) => {
           const enrollmentId = `enroll-${studentId}-${courseId}`;
           return [
             db.enrollment.upsert({
