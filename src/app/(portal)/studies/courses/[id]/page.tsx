@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText, ArrowUpRight, MapPin } from "lucide-react";
+import { ArrowUpRight, MapPin } from "lucide-react";
 import { pageStudent } from "@/server/access";
 import { pageData } from "@/server/page-data";
 import { db } from "@/server/db";
@@ -7,6 +7,8 @@ import { courseResult, roster } from "@/modules/courses/service";
 import { GradeBreakdown } from "@/modules/assessment/GradeBreakdown";
 import { AttendanceIndicator } from "@/modules/assessment/AttendanceIndicator";
 import { Roster } from "@/modules/courses/Roster";
+import { CourseMaterials } from "@/modules/courses/CourseMaterials";
+import { courseMaterialTypes } from "@/modules/courses/materials";
 import {
   Card,
   PageTitle,
@@ -29,10 +31,23 @@ export default async function CoursePage({
   const result = await pageData(courseResult(student, id));
   const course = result.enrollment.course;
   const [files, lessons, people] = await Promise.all([
-    db.fileObject.findMany({
-      where: { courseId: id },
-      select: { id: true, originalName: true, size: true },
-    }),
+    tab === "materials"
+      ? db.fileObject.findMany({
+          where: {
+            courseId: id,
+            studentId: null,
+            purpose: { in: courseMaterialTypes.map(({ purpose }) => purpose) },
+          },
+          select: {
+            id: true,
+            purpose: true,
+            mime: true,
+            originalName: true,
+            size: true,
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+        })
+      : [],
     db.lesson.findMany({
       where: {
         courseId: id,
@@ -79,24 +94,7 @@ export default async function CoursePage({
         </Card>
       ) : tab === "materials" ? (
         <div className={ui.stack}>
-          <Card>
-            <h2>Материалы курса</h2>
-            {files.map((f) => (
-              <a
-                key={f.id}
-                href={`/api/files/${f.id}`}
-                className={`${ui.row} ${ui.listItem}`}
-              >
-                <FileText size={20} />
-                <div>
-                  <h3>{f.originalName}</h3>
-                  <small className={ui.muted}>
-                    PDF · {Math.ceil(f.size / 1024)} КБ
-                  </small>
-                </div>
-              </a>
-            ))}
-          </Card>
+          <CourseMaterials files={files} />
           <Card>
             <h2>Задания и сроки</h2>
             {result.assessments.map((a) => (
@@ -112,9 +110,6 @@ export default async function CoursePage({
                   {a.maxPoints} баллов
                   {a.mandatory ? " · обязательная работа" : ""}
                 </p>
-                <a href={`/api/files/${files[0]?.id}`} className={ui.link}>
-                  Открыть демонстрационные материалы
-                </a>
               </div>
             ))}
           </Card>

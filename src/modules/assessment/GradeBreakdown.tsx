@@ -1,15 +1,88 @@
+import type { ReactNode } from "react";
 import type { courseResult } from "@/modules/courses/service";
 import { AttendanceIndicator } from "./AttendanceIndicator";
 import { Card, Badge, ui } from "@/shared/ui/primitives";
 import { formatDate } from "@/shared/lib/time";
 import { statusLabel } from "@/shared/config/statuses";
+import s from "./assessment.module.css";
+type CourseResult = Awaited<ReturnType<typeof courseResult>>;
+
 export function GradeBreakdown({
   result,
+  inline = false,
 }: {
-  result: Awaited<ReturnType<typeof courseResult>>;
+  result: CourseResult;
+  inline?: boolean;
 }) {
   const { grade, scheme, attendance, enrollment, assessments, records } =
     result;
+  if (inline) {
+    return (
+      <section className={s.inline} aria-label="Оценивание и посещаемость">
+        <div className={s.inlineHeader}>
+          <div>
+            <h2>Работы и оценки</h2>
+            {enrollment.officialGrade && enrollment.publishedAt && (
+              <p className={ui.caption}>
+                Итог опубликован {formatDate(enrollment.publishedAt)}
+              </p>
+            )}
+            {!enrollment.officialGrade && enrollment.status !== "COMPLETED" && (
+              <p className={ui.caption}>
+                {scheme.type === "PASS"
+                  ? grade.passed
+                    ? "Условия зачёта выполнены"
+                    : "Условия зачёта ещё не выполнены"
+                  : `Предварительная оценка — ${grade.projectedGrade} / 10`}
+              </p>
+            )}
+          </div>
+          {enrollment.status === "CURRENT" && !grade.admitted && (
+            <div className={s.admission}>
+              {grade.shortfall > 0 && (
+                <p>
+                  До допуска не хватает{" "}
+                  <strong>{grade.shortfall} баллов</strong>
+                </p>
+              )}
+              {grade.missing.length > 0 && (
+                <p>Обязательные работы · {grade.missing.join(", ")}</p>
+              )}
+              {grade.blockedMandatory.length > 0 && (
+                <p>
+                  Срок сдачи прошёл. Уточните порядок сдачи у преподавателя.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+        {assessments.length ? (
+          <AssessmentTable assessments={assessments} />
+        ) : (
+          <p className={ui.caption}>
+            Работы по дисциплине пока не опубликованы.
+          </p>
+        )}
+        <div className={s.inlineResources}>
+          <AssessmentRules scheme={scheme} />
+          <AttendanceJournal records={records} inline>
+            {attendance.total > 0 && (
+              <p className={ui.caption}>
+                {attendance.present} посещено · {attendance.absent} пропущено ·{" "}
+                {attendance.excused} уважительных · {attendance.unrecorded} не
+                учтено
+              </p>
+            )}
+            <AttendanceIndicator
+              attendance={attendance}
+              scheme={scheme}
+              showValue={false}
+            />
+          </AttendanceJournal>
+        </div>
+      </section>
+    );
+  }
   return (
     <div className={ui.stack}>
       <div className={ui.grid2}>
@@ -119,68 +192,99 @@ export function GradeBreakdown({
             </p>
           </div>
         )}
-        <div className={ui.tableWrap}>
-          <table>
-            <thead>
-              <tr>
-                <th>Компонент</th>
-                <th>Срок</th>
-                <th>Результат</th>
-                <th>Состояние</th>
+        <AssessmentTable assessments={assessments} />
+        <AssessmentRules scheme={scheme} />
+        <AttendanceJournal records={records} />
+      </Card>
+    </div>
+  );
+}
+
+function AssessmentTable({ assessments }: Pick<CourseResult, "assessments">) {
+  return (
+    <div className={ui.tableWrap}>
+      <table className={s.workTable} role="table">
+        <thead role="rowgroup">
+          <tr role="row">
+            <th scope="col">Компонент</th>
+            <th scope="col">Срок</th>
+            <th scope="col">Результат</th>
+            <th scope="col">Состояние</th>
+          </tr>
+        </thead>
+        <tbody role="rowgroup">
+          {assessments.map((a) => {
+            const r = a.results[0];
+            return (
+              <tr key={a.id} role="row">
+                <td role="cell">
+                  {a.title}
+                  {a.mandatory && (
+                    <small className={ui.muted}> · обязательная</small>
+                  )}
+                </td>
+                <td role="cell">{formatDate(a.dueAt)}</td>
+                <td role="cell">
+                  {r?.status === "PUBLISHED" && r.points !== null
+                    ? `${r.points} / ${a.maxPoints}`
+                    : `— / ${a.maxPoints}`}
+                </td>
+                <td role="cell">
+                  {r?.status === "SUBMITTED"
+                    ? "Сдано, результат ожидается"
+                    : r
+                      ? statusLabel(r.status)
+                      : "Не назначено"}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {assessments.map((a) => {
-                const r = a.results[0];
-                return (
-                  <tr key={a.id}>
-                    <td>
-                      {a.title}
-                      {a.mandatory && (
-                        <small className={ui.muted}> · обязательная</small>
-                      )}
-                    </td>
-                    <td>{formatDate(a.dueAt)}</td>
-                    <td>
-                      {r?.status === "PUBLISHED" && r.points !== null
-                        ? `${r.points} / ${a.maxPoints}`
-                        : `— / ${a.maxPoints}`}
-                    </td>
-                    <td>
-                      {r?.status === "SUBMITTED"
-                        ? "Сдано, результат ожидается"
-                        : r
-                          ? statusLabel(r.status)
-                          : "Не назначено"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function AssessmentRules({ scheme }: Pick<CourseResult, "scheme">) {
+  return (
+    <details className={s.disclosure}>
+      <summary>Шкала и правила оценивания</summary>
+      <div className={s.disclosureBody}>
+        <p>
+          {scheme.type === "PASS"
+            ? `Зачёт от ${scheme.passPoints} баллов с обязательными работами.`
+            : "Сумма компонентов переводится в десятибалльную оценку по порогам."}
+        </p>
+        <div className={ui.row}>
+          {scheme.thresholds.map((t) => (
+            <Badge key={t.points}>
+              {t.points}+ баллов → {t.grade}/10
+            </Badge>
+          ))}
         </div>
-        <details className={ui.details}>
-          <summary>Шкала и правила оценивания</summary>
-          <p>
-            {scheme.type === "PASS"
-              ? `Зачёт от ${scheme.passPoints} баллов с обязательными работами.`
-              : "Сумма компонентов переводится в десятибалльную оценку по порогам."}
-          </p>
-          <div className={ui.row}>
-            {scheme.thresholds.map((t) => (
-              <Badge key={t.points}>
-                {t.points}+ баллов → {t.grade}/10
-              </Badge>
-            ))}
-          </div>
-          <p className={ui.caption}>
-            Сумма ограничена максимумом компонентов. Опубликованный ноль
-            отличается от отсутствующего результата. Корректировка посещаемости
-            применяется один раз после перевода в итоговую оценку.
-          </p>
-        </details>
-        <details className={ui.details}>
-          <summary>Журнал посещаемости</summary>
+        <p className={ui.caption}>
+          Сумма ограничена максимумом компонентов. Опубликованный ноль
+          отличается от отсутствующего результата. Корректировка посещаемости
+          применяется один раз после перевода в итоговую оценку.
+        </p>
+      </div>
+    </details>
+  );
+}
+
+function AttendanceJournal({
+  records,
+  inline = false,
+  children,
+}: Pick<CourseResult, "records"> & { inline?: boolean; children?: ReactNode }) {
+  return (
+    <details className={s.disclosure}>
+      <summary>Журнал посещаемости</summary>
+      <div className={s.disclosureBody}>
+        {children}
+        {inline && !records.length ? (
+          <p className={ui.caption}>Записей о занятиях пока нет.</p>
+        ) : (
           <div className={ui.tableWrap}>
             <table>
               <thead>
@@ -212,8 +316,8 @@ export function GradeBreakdown({
               </tbody>
             </table>
           </div>
-        </details>
-      </Card>
-    </div>
+        )}
+      </div>
+    </details>
   );
 }

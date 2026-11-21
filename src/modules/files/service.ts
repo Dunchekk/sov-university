@@ -6,6 +6,7 @@ import { invariant, notFound } from "@/server/errors";
 import type { StudentContext } from "@/server/access";
 import { z } from "zod";
 import { readLimited } from "@/server/body";
+import { courseMaterialTypes } from "@/modules/courses/materials";
 const inputSchema = z.object({
   purpose: z.enum([
     "REQUEST_ATTACHMENT",
@@ -169,10 +170,17 @@ export async function downloadFile(student: StudentContext, id: string) {
   } catch {
     throw notFound();
   }
+  const material =
+    file.courseId && file.studentId === null
+      ? courseMaterialTypes.find(
+          (type) => type.purpose === file.purpose && type.mime === file.mime,
+        )
+      : undefined;
+  const extension = material?.extension ?? "pdf";
   return new Response(new Uint8Array(data), {
     headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="document.pdf"; filename*=UTF-8''${encodeURIComponent(file.originalName)}`,
+      "Content-Type": material?.mime ?? "application/pdf",
+      "Content-Disposition": `attachment; filename="document.${extension}"; filename*=UTF-8''${encodeURIComponent(file.originalName)}`,
       "X-Content-Type-Options": "nosniff",
       "Content-Security-Policy": "default-src 'none'; sandbox",
     },

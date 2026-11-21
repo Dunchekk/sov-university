@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { academicExtras } from "./academic-extras";
+import { seedCourseMaterials } from "./seed-course-materials";
 import { db } from "../src/server/db";
 import { hashPassword } from "../src/server/password";
 import { addDays, atTime, dateKey } from "../src/shared/lib/time";
@@ -997,6 +998,7 @@ async function main() {
 }
 main()
   .then(academicExtras)
+  .then(seedCourseMaterials)
   .then(async () => {
     const items = await db.achievement.findMany({
       where: { history: { none: {} } },

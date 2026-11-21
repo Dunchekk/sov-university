@@ -1,0 +1,250 @@
+.controls {
+  display: grid;
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
+  container-type: inline-size;
+}
+
+.controls > nav {
+  margin-bottom: 0;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.65fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr)
+    auto;
+  align-items: start;
+  gap: var(--space-3);
+}
+
+.filters label,
+.filters select {
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  margin-block-start: calc(1lh + var(--space-2));
+}
+
+.results {
+  --columns: minmax(0, 2.1fr) minmax(0, 0.7fr) minmax(0, 1fr) minmax(0, 1.45fr)
+    12px;
+  --row-padding: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.headers,
+.result > .summary {
+  display: grid;
+  grid-template-columns: var(--columns);
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-4) var(--row-padding);
+}
+
+.headers {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.result + .result {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.result > .summary {
+  margin: 0;
+}
+
+.result:last-child {
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+}
+
+.result:last-child:not([open]) > .summary {
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+}
+
+.result:not([open]) > .summary:hover {
+  background: color-mix(in srgb, var(--bg-subtle) 65%, transparent);
+}
+
+.result[open] {
+  background: color-mix(in srgb, var(--accent) 4%, var(--bg-surface));
+  box-shadow: inset 2px 0 var(--accent);
+}
+
+.result > .summary:focus-visible {
+  outline-offset: -3px;
+}
+
+.discipline,
+.outcome,
+.points,
+.attendance {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-1);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.points,
+.attendance {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+}
+
+.risk {
+  color: var(--warning);
+}
+
+.outcome > span {
+  white-space: normal;
+}
+
+.outcome > strong {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.mobileLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.details {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+  margin-inline: var(--row-padding);
+  padding-block: var(--space-4) var(--row-padding);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.detailsFooter {
+  font-size: var(--text-sm);
+}
+
+.next {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.next strong {
+  color: var(--text-primary);
+}
+
+.retake {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--warning-soft);
+  font-size: var(--text-sm);
+}
+
+.retake :is(h2, h3) {
+  font-size: var(--text-base);
+}
+
+.retake ul {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-2) 0 0;
+}
+
+.retake li + li {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.retake p + p {
+  margin-top: var(--space-1);
+}
+
+@container (width < 870px) {
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .actions {
+    grid-column: 1 / -1;
+    margin-block-start: 0;
+  }
+}
+
+@container (width < 660px) {
+  .headers {
+    display: none;
+  }
+
+  .result > .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 12px;
+    grid-template-areas:
+      "discipline discipline chevron"
+      "points attendance ."
+      "outcome outcome outcome";
+  }
+
+  .summary::after {
+    grid-area: chevron;
+  }
+
+  .discipline {
+    grid-area: discipline;
+  }
+
+  .points {
+    grid-area: points;
+  }
+
+  .attendance {
+    grid-area: attendance;
+  }
+
+  .outcome {
+    grid-area: outcome;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .mobileLabel {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+  }
+}
+
+@container (width < 460px) {
+  .filters > label:first-of-type {
+    grid-column: 1 / -1;
+  }
+
+  .filters > label:last-of-type {
+    grid-column: 1 / -1;
+  }
+}

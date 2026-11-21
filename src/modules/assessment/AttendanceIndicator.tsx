@@ -26,20 +26,24 @@ export function attendanceExplanation(
 export function AttendanceIndicator({
   attendance,
   scheme,
+  showValue = true,
 }: {
   attendance: ReturnType<typeof attendanceStats>;
   scheme: Scheme;
+  showValue?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const text = attendanceExplanation(attendance, scheme);
   return (
     <>
       <span className={ui.row}>
-        <span>
-          {attendance.percentage === null
-            ? "Нет данных"
-            : `${Math.round(attendance.percentage)}%`}
-        </span>
+        {showValue && (
+          <span>
+            {attendance.percentage === null
+              ? "Нет данных"
+              : `${Math.round(attendance.percentage)}%`}
+          </span>
+        )}
         <Button
           small
           aria-label="Как посещаемость влияет на результат"
@@ -53,13 +57,14 @@ export function AttendanceIndicator({
           }
         >
           <Info size={14} />
-          {scheme.attendancePenalty > 0 && (
+          {showValue && scheme.attendancePenalty > 0 && (
             <span
               className={attendance.meets === false ? ui.warning : ui.muted}
             >
               Влияет на оценку
             </span>
           )}
+          {!showValue && "Как учитывается посещаемость"}
         </Button>
       </span>
       <Dialog
