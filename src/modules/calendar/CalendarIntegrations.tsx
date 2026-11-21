@@ -146,8 +146,15 @@ function ExportPanel({ today }: { today: string }) {
     </form>
   );
 }
-function ImportPanel({ today, sources }: { today: string; sources: Source[] }) {
-  const router = useRouter();
+function ImportPanel({
+  today,
+  sources,
+  onChanged,
+}: {
+  today: string;
+  sources: Source[];
+  onChanged: () => void;
+}) {
   const [from, setFrom] = useState(formatCalendarDate(today));
   const [through, setThrough] = useState(
     formatCalendarDate(addDays(today, 179)),
@@ -199,7 +206,7 @@ function ImportPanel({ today, sources }: { today: string; sources: Source[] }) {
         `Импорт завершён: добавлено ${result.added}, обновлено ${result.updated}, без изменений ${result.unchanged}${result.removed ? `, отменено ${result.removed}` : ""}.`,
       );
       setPreview(null);
-      router.refresh();
+      onChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось импортировать.");
     } finally {
@@ -390,11 +397,12 @@ function ImportPanel({ today, sources }: { today: string; sources: Source[] }) {
 function FeedPanel({
   feeds,
   publicAddress,
+  onChanged,
 }: {
   feeds: Feed[];
   publicAddress: boolean;
+  onChanged: () => void;
 }) {
-  const router = useRouter();
   const [layers, setLayers] = useState(defaults),
     [secret, setSecret] = useState(""),
     [error, setError] = useState(""),
@@ -411,7 +419,7 @@ function FeedPanel({
         body: JSON.stringify({ name: form.get("name"), layers }),
       });
       setSecret(result.url);
-      router.refresh();
+      onChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось создать ссылку.");
     } finally {
@@ -537,7 +545,7 @@ function FeedPanel({
                 });
                 setRemove(null);
                 setSecret("");
-                router.refresh();
+                onChanged();
               } catch (e) {
                 setError(e instanceof Error ? e.message : "Ошибка отзыва.");
                 setRemove(null);
@@ -558,13 +566,19 @@ export function Integrations({
   sources,
   feeds,
   publicAddress,
+  onChanged,
 }: {
   today: string;
   sources: Source[];
   feeds: Feed[];
   publicAddress: boolean;
+  onChanged?: () => void;
 }) {
   const router = useRouter();
+  const refresh = () => {
+    router.refresh();
+    onChanged?.();
+  };
   const [tab, setTab] = useState("export"),
     [remove, setRemove] = useState<Source | null>(null),
     [error, setError] = useState(""),
@@ -591,9 +605,13 @@ export function Integrations({
         {tab === "export" ? (
           <ExportPanel today={today} />
         ) : tab === "import" ? (
-          <ImportPanel today={today} sources={sources} />
+          <ImportPanel today={today} sources={sources} onChanged={refresh} />
         ) : (
-          <FeedPanel feeds={feeds} publicAddress={publicAddress} />
+          <FeedPanel
+            feeds={feeds}
+            publicAddress={publicAddress}
+            onChanged={refresh}
+          />
         )}
       </Card>
       {sources.length > 0 && (
@@ -639,7 +657,7 @@ export function Integrations({
                   method: "DELETE",
                 });
                 setRemove(null);
-                router.refresh();
+                refresh();
               } catch (e) {
                 setError(e instanceof Error ? e.message : "Ошибка удаления.");
                 setRemove(null);

@@ -1,5 +1,6 @@
 import { addDays, dateKey, dayStart } from "@/shared/lib/time";
 import type { CalendarEvent } from "./types";
+export const CALENDAR_BUFFER_DAYS = 14;
 export function calendarRange(date: string, view: string) {
   if (view === "day") return { from: date, to: addDays(date, 1) };
   if (view === "week") {
@@ -16,7 +17,10 @@ export function calendarDataRange(date: string, view: string) {
   const range = calendarRange(date, view);
   return view === "month"
     ? range
-    : { from: addDays(range.from, -14), to: addDays(range.to, 14) };
+    : {
+        from: addDays(range.from, -CALENDAR_BUFFER_DAYS),
+        to: addDays(range.to, CALENDAR_BUFFER_DAYS),
+      };
 }
 export function eventsOnDay(events: CalendarEvent[], day: string) {
   const from = dayStart(day).getTime(),

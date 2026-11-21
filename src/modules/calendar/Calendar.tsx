@@ -1,11 +1,5 @@
 "use client";
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-} from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -62,6 +56,21 @@ const SchedulePicker = dynamic(
     ),
   },
 );
+const CalendarConnectionsDialog = dynamic(
+  () =>
+    import("./CalendarConnectionsDialog").then(
+      (module) => module.CalendarConnectionsDialog,
+    ),
+  {
+    loading: () => (
+      <div
+        className={ui.skeleton}
+        role="status"
+        aria-label="Загрузка подключений"
+      />
+    ),
+  },
+);
 
 export function Calendar({
   events,
@@ -71,7 +80,7 @@ export function Calendar({
   types,
   schedules,
   now,
-  connections,
+  publicAddress,
 }: {
   events: CalendarEvent[];
   examPeriod: ExamPeriod | null;
@@ -80,12 +89,13 @@ export function Calendar({
   types: string[];
   schedules: ScheduleSelection[];
   now: string;
-  connections: ReactNode;
+  publicAddress: boolean;
 }) {
   const router = useRouter(),
     path = usePathname(),
     params = useSearchParams();
   const [connectionsOpen, setConnectionsOpen] = useState(false);
+  const [connectionsOpening, setConnectionsOpening] = useState(0);
   const [comparison, setComparison] = useState<"unopened" | "open" | "closed">(
     "unopened",
   );
@@ -119,6 +129,9 @@ export function Calendar({
     [days, events, view],
   );
   const today = dateKey(currentTime);
+  const urlDate = params.get("date");
+  const activeDate =
+    view !== "month" && urlDate && days.includes(urlDate) ? urlDate : date;
   const visibleDays =
     view === "month"
       ? {
@@ -138,16 +151,22 @@ export function Calendar({
       window.history.pushState(null, "", href);
   };
   const change = (values: Record<string, string | null>) => {
-    const next = new URLSearchParams(params);
+    const next = new URLSearchParams(window.location.search);
     next.delete("finance");
     for (const [k, v] of Object.entries(values)) {
       if (v === null) next.delete(k);
       else next.set(k, v);
     }
-    const commit = () => router.push(`${path}?${next}`, { scroll: false });
+    const commit = () => {
+      const href = `${path}?${next}`;
+      const alreadyCurrent =
+        href === window.location.pathname + window.location.search;
+      router.push(href, { scroll: false });
+      return alreadyCurrent;
+    };
     if (values.date || values.view)
       void transitionTo(
-        values.date ?? date,
+        values.date ?? activeDate,
         values.view ?? view,
         commit,
         !!values.date,
@@ -411,6 +430,7 @@ export function Calendar({
                 aria-haspopup="dialog"
                 onClick={(e) => {
                   e.currentTarget.focus();
+                  setConnectionsOpening((value) => value + 1);
                   setConnectionsOpen(true);
                 }}
               >
@@ -524,14 +544,20 @@ export function Calendar({
         title="Импорт и подписки"
         className={s.connectionsDialog}
       >
-        {connections}
+        {connectionsOpening > 0 && (
+          <CalendarConnectionsDialog
+            today={today}
+            publicAddress={publicAddress}
+            opening={connectionsOpening}
+          />
+        )}
       </Dialog>
       <Dialog
         open={create}
         onClose={() => setCreate(false)}
         title="Личное событие"
       >
-        <PersonalForm date={date} onSaved={refresh} />
+        <PersonalForm date={activeDate} onSaved={refresh} />
       </Dialog>
       <Dialog
         open={comparison === "open"}

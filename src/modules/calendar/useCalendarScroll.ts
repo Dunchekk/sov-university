@@ -2,9 +2,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { addDays, dateKey } from "@/shared/lib/time";
+import { CALENDAR_BUFFER_DAYS } from "./layout";
 
 const dayDifference = (from: string, to: string) =>
   (Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86400000;
+const bufferContains = (from: string, day: string, margin = 0) => {
+  const position = dayDifference(from, day);
+  return position >= margin && position <= 2 * CALENDAR_BUFFER_DAYS - margin;
+};
 const reducedMotion = () =>
   matchMedia("(prefers-reduced-motion: reduce)").matches;
 const reveal = (node: HTMLDivElement | null) => {
@@ -48,6 +53,7 @@ export function useCalendarScroll(date: string, view: string, from: string) {
   const frameRef = useRef<HTMLDivElement>(null);
   const anchor = useRef<{ day: string; fraction: number } | null>(null);
   const lastView = useRef(view);
+  const renderedRange = useRef({ from, view });
   const dayWidth = useRef(144);
   const lastLeft = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -80,10 +86,17 @@ export function useCalendarScroll(date: string, view: string, from: string) {
   };
 
   useLayoutEffect(() => {
+    renderedRange.current = { from, view };
     const node = scroll.current;
     if (node) {
       const reset = !anchor.current || lastView.current !== view;
-      if (reset) anchor.current = { day: date, fraction: 0 };
+      if (reset) {
+        const urlDate = new URLSearchParams(window.location.search).get("date");
+        anchor.current = {
+          day: urlDate && bufferContains(from, urlDate) ? urlDate : date,
+          fraction: 0,
+        };
+      }
       const position = () => {
         const width = Math.max(
           144,
@@ -97,6 +110,7 @@ export function useCalendarScroll(date: string, view: string, from: string) {
         lastLeft.current = node.scrollLeft;
       };
       position();
+      publishVisible(node, from, view === "day" ? 1 : 7);
       if (reset && node.scrollTop === 0) node.scrollTop = 8 * 52;
       node.dataset.ready = "true";
       const observer = new ResizeObserver(() => {
@@ -123,10 +137,6 @@ export function useCalendarScroll(date: string, view: string, from: string) {
 
   useEffect(() => {
     const restore = () => {
-      const day =
-        new URLSearchParams(window.location.search).get("date") || dateKey();
-      if (anchor.current?.day !== day && /^\d{4}-\d{2}-\d{2}$/.test(day))
-        anchor.current = { day, fraction: 0 };
       clearTimeout(timer.current);
       revision.current++;
       animation.current?.cancel();
@@ -134,6 +144,22 @@ export function useCalendarScroll(date: string, view: string, from: string) {
       if (frameRef.current) {
         frameRef.current.style.opacity = "";
         delete frameRef.current.dataset.transition;
+      }
+      const params = new URLSearchParams(window.location.search);
+      const day = params.get("date") || dateKey();
+      if (anchor.current?.day === day || !/^\d{4}-\d{2}-\d{2}$/.test(day))
+        return;
+      anchor.current = { day, fraction: 0 };
+      const { from, view } = renderedRange.current;
+      const node = scroll.current;
+      if (
+        node &&
+        (!params.has("view") || params.get("view") === view) &&
+        bufferContains(from, day)
+      ) {
+        node.scrollLeft = dayDifference(from, day) * dayWidth.current;
+        lastLeft.current = node.scrollLeft;
+        publishVisible(node, from, view === "day" ? 1 : 7);
       }
     };
     window.addEventListener("popstate", restore);
@@ -147,7 +173,7 @@ export function useCalendarScroll(date: string, view: string, from: string) {
   const transitionTo = async (
     next: string,
     nextView: string,
-    commit: () => void,
+    commit: () => boolean,
     highlight = false,
   ) => {
     clearTimeout(timer.current);
@@ -179,8 +205,8 @@ export function useCalendarScroll(date: string, view: string, from: string) {
         lastLeft.current = node.scrollLeft;
       }
     }
-    commit();
-    if (next === date && nextView === view) {
+    const alreadyCurrent = commit();
+    if (alreadyCurrent || (next === date && nextView === view)) {
       jump.current = null;
       if (node) publishVisible(node, from, view === "day" ? 1 : 7);
       reveal(frame);
@@ -225,7 +251,10 @@ export function useCalendarScroll(date: string, view: string, from: string) {
       next.set("date", day);
       next.set("view", view);
       next.delete("finance");
-      router.replace(`${path}?${next}`, { scroll: false });
+      const href = `${path}?${next}`;
+      if (bufferContains(from, day, 7))
+        window.history.replaceState(null, "", href);
+      else router.replace(href, { scroll: false });
     }, 180);
   };
 

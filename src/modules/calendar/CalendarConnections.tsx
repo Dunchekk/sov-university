@@ -1,20 +1,33 @@
 import { ArrowUpRight } from "lucide-react";
-import { integrations } from "./integrations";
 import { Integrations } from "./CalendarIntegrations";
 import { Card, ui } from "@/shared/ui/primitives";
-import { dateKey } from "@/shared/lib/time";
 import s from "./calendar.module.css";
 
-export async function CalendarConnections({
-  studentId,
+export type CalendarConnectionsData = {
+  sources: { id: string; name: string; _count: { events: number } }[];
+  feeds: {
+    id: string;
+    name: string;
+    layers: string[];
+    createdAt: Date | string;
+  }[];
+};
+
+export function CalendarConnections({
+  data,
+  today,
+  publicAddress,
+  onChanged,
 }: {
-  studentId: string;
+  data: CalendarConnectionsData;
+  today: string;
+  publicAddress: boolean;
+  onChanged?: () => void;
 }) {
-  const data = await integrations(studentId);
   return (
     <div className={ui.stack}>
       <Integrations
-        today={dateKey()}
+        today={today}
         sources={data.sources.map((s) => ({
           id: s.id,
           name: s.name,
@@ -22,9 +35,13 @@ export async function CalendarConnections({
         }))}
         feeds={data.feeds.map((f) => ({
           ...f,
-          createdAt: f.createdAt.toISOString(),
+          createdAt:
+            typeof f.createdAt === "string"
+              ? f.createdAt
+              : f.createdAt.toISOString(),
         }))}
-        publicAddress={process.env.APP_URL?.startsWith("https://") ?? false}
+        publicAddress={publicAddress}
+        onChanged={onChanged}
       />
       <details className={ui.details}>
         <summary>Как подключить другой календарь</summary>

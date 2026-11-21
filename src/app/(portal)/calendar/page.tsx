@@ -6,7 +6,6 @@ import {
 } from "@/modules/calendar/service";
 import { calendarDataRange } from "@/modules/calendar/layout";
 import { Calendar } from "@/modules/calendar/Calendar";
-import { CalendarConnections } from "@/modules/calendar/CalendarConnections";
 import { eventTypes } from "@/modules/calendar/types";
 import { dateKey } from "@/shared/lib/time";
 import { z } from "zod";
@@ -45,7 +44,7 @@ export default async function CalendarPage({
         types={query.types ?? [...eventTypes]}
         schedules={query.schedules ?? []}
         now={new Date().toISOString()}
-        connections={<CalendarConnections studentId={student.id} />}
+        publicAddress={process.env.APP_URL?.startsWith("https://") ?? false}
       />
     </>
   );

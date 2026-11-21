@@ -360,11 +360,18 @@ test("calendar scrolls across dates continuously and preserves vertical position
       }),
     ),
   ).toBe(true);
+  const requestedDays = new Set<string>();
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    const day = url.searchParams.get("date");
+    if (url.pathname === "/calendar" && day) requestedDays.add(day);
+  });
   await timeline.evaluate((element) => {
     element.scrollTop = 600;
   });
   await page.getByRole("button", { name: "Следующий период" }).click();
   await expectDate(addDays(day, 1));
+  expect(requestedDays.has(addDays(day, 1))).toBe(false);
   expect(await timeline.evaluate((element) => element.scrollTop)).toBe(600);
   await expect(
     page.locator('[aria-label="Выбор даты"] [aria-pressed="true"]'),
@@ -388,6 +395,7 @@ test("calendar scrolls across dates continuously and preserves vertical position
     await expectDate(addDays(day, 1 + offset));
     expect(await timeline.evaluate((element) => element.scrollTop)).toBe(600);
   }
+  expect(requestedDays.has(addDays(day, 14))).toBe(true);
   expect(
     await timeline.evaluate(
       (element) =>

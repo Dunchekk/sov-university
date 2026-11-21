@@ -484,6 +484,10 @@ test("browser imports a file, confirms its preview and navigates calendar views"
     .sources;
   const source = sources.find((s: { name: string }) => s.name === name);
   try {
+    const layers = connections.locator("section").filter({
+      has: page.getByRole("heading", { name: "Импортированные слои" }),
+    });
+    await expect(layers.getByText(name, { exact: true })).toBeVisible();
     for (const view of ["day", "week", "month"]) {
       await page.goto(`/calendar?view=${view}&date=${day}`);
       await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
