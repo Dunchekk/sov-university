@@ -74,7 +74,11 @@ export function CommunityStrip({ items }: { items: Highlight[] }) {
         >
           {items.map((item) => (
             <li key={item.href}>
-              <Link href={item.href} className={s.communityPost}>
+              <Link
+                href={item.href}
+                className={s.communityPost}
+                data-kind={item.kind === "Новость" ? "news" : "event"}
+              >
                 <div className={s.communityCopy}>
                   <p className={s.communityMeta}>
                     {item.kind} ·{" "}
@@ -87,7 +91,7 @@ export function CommunityStrip({ items }: { items: Highlight[] }) {
                 </div>
                 {item.cover && (
                   <div className={s.communityMedia}>
-                    <Cover src={item.cover} sizes="160px" />
+                    <Cover src={item.cover} sizes="140px" />
                   </div>
                 )}
               </Link>

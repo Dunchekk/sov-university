@@ -136,7 +136,24 @@ test("home highlights mix events and news and fade only scrollable edges", async
       .getByRole("link");
     const event = strip.getByRole("link", { name: new RegExp(title) });
     await expect(event).toHaveAttribute("href", `/community/${id}`);
-    await expect(event.locator("img")).toBeVisible();
+    await strip.scrollIntoViewIfNeeded();
+    const cover = event.locator("img");
+    await expect(cover).toBeVisible();
+    await expect
+      .poll(() =>
+        cover.evaluate((image) => (image as HTMLImageElement).naturalWidth),
+      )
+      .toBeGreaterThan(0);
+    const cards = strip.locator(":scope > li > a");
+    expect(await strip.locator("img").count()).toBeGreaterThanOrEqual(
+      (await cards.count()) - 2,
+    );
+    const heights = () =>
+      cards.evaluateAll((links) =>
+        links.map((link) => link.getBoundingClientRect().height),
+      );
+    expect(await heights()).toEqual(Array(await cards.count()).fill(144));
+    await expect(strip).toHaveCSS("scroll-snap-type", "x mandatory");
     await expect(
       strip.locator('a[href^="/community/news/"]').first(),
     ).toBeVisible();
@@ -153,6 +170,8 @@ test("home highlights mix events and news and fade only scrollable edges", async
       el.scrollLeft = el.scrollWidth;
     });
     await expect(strip).not.toHaveAttribute("data-fade-end");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    expect(await heights()).toEqual(Array(await cards.count()).fill(144));
     await headingLink.click();
     await expect(
       page.getByRole("heading", { name: "События", level: 1 }),
