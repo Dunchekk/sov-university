@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { AlertCircle, Plus, Wallet } from "lucide-react";
 import { pageStudent } from "@/server/access";
 import { db } from "@/server/db";
@@ -23,7 +24,7 @@ export default async function Home() {
   const student = await pageStudent();
   const today = dateKey();
   const now = new Date();
-  const [events, deadlines, requests, community, payment] = await Promise.all([
+  const [events, deadlines, requests, payment] = await Promise.all([
     calendarEvents(student, {
       from: addDays(today, -3),
       to: addDays(today, 21),
@@ -38,7 +39,6 @@ export default async function Home() {
       orderBy: { updatedAt: "desc" },
       take: 3,
     }),
-    communityHighlights(student.groupId, now),
     db.payment.findFirst({
       where: { studentId: student.id, status: "EXPECTED" },
       orderBy: { date: "asc" },
@@ -170,8 +170,21 @@ export default async function Home() {
             )}
           </div>
         </div>
-        <CommunityStrip items={community} />
+        <Suspense fallback={null}>
+          <DashboardCommunity groupId={student.groupId} now={now} />
+        </Suspense>
       </div>
     </div>
   );
+}
+
+async function DashboardCommunity({
+  groupId,
+  now,
+}: {
+  groupId: string;
+  now: Date;
+}) {
+  const items = await communityHighlights(groupId, now);
+  return <CommunityStrip items={items} />;
 }

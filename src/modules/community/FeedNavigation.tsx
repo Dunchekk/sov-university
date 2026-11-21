@@ -63,7 +63,7 @@ export function FeedResults({ children }: { children: ReactNode }) {
   return <div aria-busy={pending}>{pending ? <FeedSkeleton /> : children}</div>;
 }
 
-export function FeedSkeleton() {
+function FeedSkeleton() {
   return (
     <div role="status" aria-label="Загрузка публикаций">
       <div className={s.feed} aria-hidden>

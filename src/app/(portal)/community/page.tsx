@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import { Bookmark, CalendarDays, MapPin } from "lucide-react";
 import { z } from "zod";
 import { pageStudent } from "@/server/access";
@@ -24,7 +23,6 @@ import {
   FeedLink,
   FeedNavigation,
   FeedResults,
-  FeedSkeleton,
 } from "@/modules/community/FeedNavigation";
 import s from "@/modules/community/community.module.css";
 
@@ -154,9 +152,7 @@ export default async function CommunityPage({
         </div>
 
         <FeedResults>
-          <Suspense key={communityHref(filters)} fallback={<FeedSkeleton />}>
-            <CommunityFeed filters={filters} student={student} now={now} />
-          </Suspense>
+          {await CommunityFeed({ filters, student, now })}
         </FeedResults>
       </div>
     </FeedNavigation>
