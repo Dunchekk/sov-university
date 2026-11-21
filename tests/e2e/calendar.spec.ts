@@ -33,6 +33,9 @@ test("loaded events use browser history and schedule searches wait for the dialo
   const dialog = page.getByRole("dialog", { name: retake.title, exact: true });
   await card.click();
   await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("link", { name: "Елена Викторовна Белова" }),
+  ).toHaveAttribute("href", "/people/lecturer-2");
   await expect(page).toHaveURL(new RegExp(`event=${retake.id}`));
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();

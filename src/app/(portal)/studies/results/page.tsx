@@ -10,6 +10,8 @@ import { FilterForm, FilterSelect } from "@/shared/ui/FilterForm";
 import { pageStudent } from "@/server/access";
 import { myCourses } from "@/modules/courses/service";
 import { GradeBreakdown } from "@/modules/assessment/GradeBreakdown";
+import { RetakeConsultation } from "@/modules/assessment/RetakeConsultation";
+import type { Prisma } from "@/generated/prisma/client";
 import {
   ActionLink,
   Badge,
@@ -34,7 +36,9 @@ const sorts = [
 ] as const;
 const byName = new Intl.Collator("ru");
 type Result = Awaited<ReturnType<typeof myCourses>>[number];
-type Retake = Awaited<ReturnType<typeof db.retake.findMany>>[number];
+type Retake = Prisma.RetakeGetPayload<{
+  include: { consultationLecturer: { select: { id: true; name: true } } };
+}>;
 
 function prepareResult(result: Result, retakes: Retake[], now: Date) {
   const { attendance, enrollment, grade } = result;
@@ -45,17 +49,12 @@ function prepareResult(result: Result, retakes: Retake[], now: Date) {
     !completed && (debt || !grade.admitted || attendance.meets === false);
   const priority = completed ? 3 : debt ? 0 : attention ? 1 : 2;
   const lastRetake = retakes.at(-1);
-  const nextAssessment = result.assessments.find((assessment) => {
-    const state = assessment.results[0]?.status;
-    return assessment.dueAt >= now && (!state || state === "UPCOMING");
-  });
 
   return {
     result,
     retakes,
     nextRetake,
     lastRetake,
-    nextAssessment,
     completed,
     debt,
     attention,
@@ -75,7 +74,6 @@ function ResultRow({
     retakes,
     nextRetake,
     lastRetake,
-    nextAssessment,
     completed,
     debt,
     attention,
@@ -136,16 +134,11 @@ function ResultRow({
               <span className={ui.caption}>{status}</span>
             </>
           ) : (
-            <>
-              <Badge
-                tone={completed ? "success" : attention ? "warning" : "default"}
-              >
-                {status}
-              </Badge>
-              {officialResult && (
-                <span className={ui.caption}>{officialResult}</span>
-              )}
-            </>
+            <Badge
+              tone={completed ? "success" : attention ? "warning" : "default"}
+            >
+              {status}
+            </Badge>
           )}
           {!completed && debt && due && (
             <span className={ui.caption}>
@@ -180,22 +173,14 @@ function ResultRow({
                     {retake.location}
                   </p>
                   <p>{retake.reason}</p>
-                  <p className={ui.caption}>{retake.consultation}</p>
+                  <RetakeConsultation
+                    text={retake.consultation}
+                    lecturer={retake.consultationLecturer}
+                  />
                 </li>
               ))}
             </ul>
           </section>
-        )}
-        {!completed && !nextRetake && nextAssessment && (
-          <p className={s.next}>
-            <strong>Ближайшая работа</strong>
-            <span>
-              {nextAssessment.title} ·{" "}
-              <time dateTime={nextAssessment.dueAt.toISOString()}>
-                {formatDate(nextAssessment.dueAt)}
-              </time>
-            </span>
-          </p>
         )}
         <GradeBreakdown result={result} inline />
         <div className={s.detailsFooter}>
@@ -219,6 +204,7 @@ export default async function ResultsPage({
     myCourses(student),
     db.retake.findMany({
       where: { enrollment: { studentId: student.id } },
+      include: { consultationLecturer: { select: { id: true, name: true } } },
       orderBy: [{ startsAt: "asc" }, { id: "asc" }],
     }),
   ]);
@@ -316,7 +302,7 @@ export default async function ResultsPage({
         >
           <input type="hidden" name="status" value={status} />
           <label>
-            Дисциплина
+            <span className={s.filterLabel}>Дисциплина</span>
             <FilterSelect name="course" value={filters.course}>
               <option value="">Все дисциплины</option>
               {courses.map((course) => (
@@ -327,7 +313,7 @@ export default async function ResultsPage({
             </FilterSelect>
           </label>
           <label>
-            Семестр
+            <span className={s.filterLabel}>Семестр</span>
             <FilterSelect name="semester" value={filters.semester}>
               <option value="">Все семестры</option>
               {semesters.map((semester) => (
@@ -338,7 +324,7 @@ export default async function ResultsPage({
             </FilterSelect>
           </label>
           <label>
-            Аттестация
+            <span className={s.filterLabel}>Аттестация</span>
             <FilterSelect name="type" value={filters.type}>
               <option value="">Все виды</option>
               {types.map((type) => (
@@ -347,7 +333,7 @@ export default async function ResultsPage({
             </FilterSelect>
           </label>
           <label>
-            Порядок
+            <span className={s.filterLabel}>Порядок</span>
             <FilterSelect name="sort" value={sort}>
               {sorts.map(({ id, label }) => (
                 <option key={id} value={id}>

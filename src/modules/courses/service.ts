@@ -138,7 +138,12 @@ export async function roster(
   const [items, total] = await Promise.all([
     db.rosterPerson.findMany({
       where,
-      select: { id: true, name: true, group: { select: { name: true } } },
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        group: { select: { name: true } },
+      },
       orderBy: { name: "asc" },
       take: 20,
       skip: (Math.min(100, Math.max(1, page)) - 1) * 20,

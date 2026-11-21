@@ -234,6 +234,9 @@ export async function calendarEvents(
             startsAt: { lt: to },
             endsAt: { gt: from },
           },
+          include: {
+            consultationLecturer: { select: { id: true, name: true } },
+          },
         })
       : [],
   ]);
@@ -252,15 +255,24 @@ export async function calendarEvents(
     editable: false,
     source: "Учебное расписание",
   };
-  for (const r of retakes)
+  for (const r of retakes) {
+    const consultant = r.consultationLecturer;
+    const exportDescription = consultant
+      ? `Консультация · ${consultant.name}. ${r.consultation}`
+      : r.consultation;
     result.push({
       ...defaults,
       id: r.id,
       uid: `${r.id}@ryadom.local`,
       type: "EXAM",
       title: r.title,
-      description: `${r.reason} ${r.consultation}`,
-      exportDescription: r.consultation,
+      description: `${r.reason} ${exportDescription}`,
+      consultation: {
+        reason: r.reason,
+        text: r.consultation,
+        lecturer: consultant,
+      },
+      exportDescription,
       startsAt: r.startsAt.toISOString(),
       endsAt: r.endsAt.toISOString(),
       location: r.location,
@@ -269,6 +281,7 @@ export async function calendarEvents(
       sequence: r.sequence,
       updatedAt: r.updatedAt.toISOString(),
     });
+  }
   for (const lesson of lessons) {
     const type = lesson.kind === "Экзамен" ? "EXAM" : "LESSON";
     if (!q.types.includes(type)) continue;

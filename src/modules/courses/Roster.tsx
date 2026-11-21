@@ -2,6 +2,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Avatar, Button, Empty, ui } from "@/shared/ui/primitives";
+import { LecturerLink } from "@/shared/ui/LecturerLink";
 import { filterHref } from "@/shared/lib/filters";
 import {
   rosterFilters,
@@ -22,7 +23,7 @@ export function Roster({
   courseId: string;
   initial: Data;
   initialFilters: RosterFilters;
-  teacher: { name: string; email: string; consultation: string };
+  teacher: { id: string; name: string; email: string; consultation: string };
 }) {
   const path = usePathname();
   const params = useSearchParams();
@@ -153,7 +154,9 @@ export function Roster({
           <div className={`${ui.row} ${ui.listItem}`}>
             <Avatar name={teacher.name} />
             <div>
-              <h3>{teacher.name}</h3>
+              <h3>
+                <LecturerLink {...teacher} />
+              </h3>
               <p className={ui.caption}>Преподаватель · {teacher.email}</p>
               <p className={ui.caption}>{teacher.consultation}</p>
             </div>
@@ -164,7 +167,7 @@ export function Roster({
             <div className={ui.grid2}>
               {data.items.map((person) => (
                 <div className={`${ui.row} ${ui.listItem}`} key={person.id}>
-                  <Avatar name={person.name} />
+                  <Avatar name={person.name} src={person.avatar} />
                   <div>
                     <h3>{person.name}</h3>
                     <p className={ui.caption}>Студент · {person.group.name}</p>

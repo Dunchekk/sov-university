@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Star, X } from "lucide-react";
 import { Button, ui } from "@/shared/ui/primitives";
+import { LecturerLink } from "@/shared/ui/LecturerLink";
 import { api } from "@/shared/lib/client";
 import type { ScheduleSelection } from "./types";
 import s from "./calendar.module.css";
@@ -61,36 +62,50 @@ export function SchedulePicker({
     const favorite = saved.some(
       (v) => v.kind === item.kind && v.id === item.id,
     );
+    const lecturer = item.kind === "lecturer";
+    const kind = lecturer
+      ? "Преподаватель"
+      : item.kind === "group"
+        ? "Группа"
+        : "Аудитория";
+    const checkbox = (
+      <input
+        type="checkbox"
+        aria-label={lecturer ? `${item.label} · ${kind}` : undefined}
+        checked={checked}
+        disabled={!checked && selected.length >= 2}
+        onChange={() =>
+          onSelect(
+            checked
+              ? selected.filter((v) => v.kind !== item.kind || v.id !== item.id)
+              : [...selected, { kind: item.kind, id: item.id }],
+          )
+        }
+      />
+    );
+    const label = (
+      <span>
+        {lecturer ? (
+          <LecturerLink id={item.id} name={item.label} />
+        ) : (
+          item.label
+        )}
+        <small className={ui.muted}> · {kind}</small>
+      </span>
+    );
     return (
       <div key={`${item.kind}:${item.id}`} className={ui.between}>
-        <label className={ui.row}>
-          <input
-            type="checkbox"
-            checked={checked}
-            disabled={!checked && selected.length >= 2}
-            onChange={() =>
-              onSelect(
-                checked
-                  ? selected.filter(
-                      (v) => v.kind !== item.kind || v.id !== item.id,
-                    )
-                  : [...selected, { kind: item.kind, id: item.id }],
-              )
-            }
-          />
-          <span>
-            {item.label}
-            <small className={ui.muted}>
-              {" "}
-              ·{" "}
-              {item.kind === "group"
-                ? "Группа"
-                : item.kind === "lecturer"
-                  ? "Преподаватель"
-                  : "Аудитория"}
-            </small>
-          </span>
-        </label>
+        {lecturer ? (
+          <div className={ui.row}>
+            {checkbox}
+            {label}
+          </div>
+        ) : (
+          <label className={ui.row}>
+            {checkbox}
+            {label}
+          </label>
+        )}
         <Button
           small
           aria-label={
@@ -128,7 +143,7 @@ export function SchedulePicker({
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="ДП-21, Воронцова, 405"
+          placeholder="Группа, фамилия или аудитория"
         />
       </label>
       {saved.length > 0 && (

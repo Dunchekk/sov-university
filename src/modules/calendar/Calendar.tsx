@@ -23,6 +23,8 @@ import {
   Clock3,
 } from "lucide-react";
 import { Button, Badge, ui } from "@/shared/ui/primitives";
+import { LecturerLink } from "@/shared/ui/LecturerLink";
+import { RetakeConsultation } from "@/modules/assessment/RetakeConsultation";
 import { Dialog } from "@/shared/ui/Dialog";
 import { api } from "@/shared/lib/client";
 import {
@@ -650,11 +652,20 @@ export function Calendar({
                 <p className={s.eventDetail}>
                   <UserRound size={17} />
                   <span>
-                    {selected.lecturer} · {selected.group}
+                    <LecturerLink
+                      id={selected.lecturerId}
+                      name={selected.lecturer}
+                    />
+                    {selected.group && ` · ${selected.group}`}
                   </span>
                 </p>
               )}
-              {selected.type !== "LESSON" && <p>{selected.description}</p>}
+              {selected.type !== "LESSON" && (
+                <p>{selected.consultation?.reason ?? selected.description}</p>
+              )}
+              {selected.consultation && (
+                <RetakeConsultation {...selected.consultation} />
+              )}
               {selected.status && (
                 <p className={ui.muted}>
                   Состояние:{" "}

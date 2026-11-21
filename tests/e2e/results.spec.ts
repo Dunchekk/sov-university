@@ -21,6 +21,22 @@ test("results combine filters, preserve them across tabs and keep retakes with t
   await debt.locator(":scope > summary").click();
   await expect(debt.getByRole("heading", { name: /Пересдача/ })).toBeVisible();
   await expect(debt.getByText(/Корпус А, аудитория 405/)).toBeVisible();
+  await expect(debt.locator(":scope > summary")).not.toContainText(
+    "Итог 3 / 10",
+  );
+  await expect(
+    debt.getByRole("link", { name: "Елена Викторовна Белова" }),
+  ).toHaveAttribute("href", "/people/lecturer-2");
+  const disclosure = debt.getByText("Шкала и правила оценивания", {
+    exact: true,
+  });
+  await disclosure.click();
+  await expect(disclosure.locator("..")).toHaveCSS("border-top-width", "0px");
+  const scale = debt.getByRole("table", { name: "Шкала оценивания" });
+  const threshold = scale.getByRole("row", { name: "30 3", exact: true });
+  await expect(
+    threshold.getByRole("cell", { name: "3", exact: true }),
+  ).toBeVisible();
 
   await course.selectOption("course-debt");
   await semester.selectOption("2");
@@ -120,4 +136,11 @@ test("results offer data-driven filter values and order courses by name or semes
     .allTextContents();
   expect(metadata.length).toBeGreaterThan(0);
   expect(metadata.every((label) => label.endsWith("Зачёт"))).toBe(true);
+  await page.goto("/studies/results?course=course-1");
+  await expect(
+    results.getByRole("heading", { name: "Работы и оценки" }),
+  ).toBeVisible();
+  await expect(
+    results.getByText("Ближайшая работа", { exact: true }),
+  ).toHaveCount(0);
 });

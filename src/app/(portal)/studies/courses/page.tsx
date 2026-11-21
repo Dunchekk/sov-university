@@ -3,6 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import { pageStudent } from "@/server/access";
 import { myCourses } from "@/modules/courses/service";
 import { AttendanceIndicator } from "@/modules/assessment/AttendanceIndicator";
+import { LecturerLink } from "@/shared/ui/LecturerLink";
 import {
   Card,
   PageTitle,
@@ -97,7 +98,7 @@ export default async function CoursesPage({
                     <ArrowUpRight size={18} aria-hidden="true" />
                   </Link>
                   <p className={ui.caption}>
-                    {course.lecturer.name}
+                    <LecturerLink {...course.lecturer} />
                     {past && ` · ${course.semester} семестр`}
                   </p>
                 </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LecturerLink } from "@/shared/ui/LecturerLink";
 import { ArrowUpRight, MapPin } from "lucide-react";
 import { pageStudent } from "@/server/access";
 import { pageData } from "@/server/page-data";
@@ -170,7 +171,9 @@ export default async function CoursePage({
               <h2>О дисциплине</h2>
               <p className={ui.muted}>{course.description}</p>
               <hr />
-              <h3>{course.lecturer.name}</h3>
+              <h3>
+                <LecturerLink {...course.lecturer} />
+              </h3>
               <p className={ui.caption}>
                 {course.lecturer.department} · {course.lecturer.email}
               </p>

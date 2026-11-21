@@ -104,13 +104,8 @@
 
 .disclosure {
   min-width: 0;
-  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
   background: var(--bg-surface);
-}
-
-.disclosure:hover {
-  border-color: var(--border-control);
 }
 
 .disclosure > summary {
@@ -118,6 +113,17 @@
   padding: var(--space-3) var(--space-4);
   border-radius: inherit;
   font-weight: var(--weight-regular);
+}
+
+.disclosure > summary:hover,
+.disclosure > summary:focus-visible {
+  background: var(--bg-subtle);
+}
+
+.disclosure > summary:focus-visible {
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .disclosure[open] > summary {
@@ -129,6 +135,11 @@
   gap: var(--space-2);
   min-width: 0;
   padding: 0 var(--space-4) var(--space-4);
+}
+
+.scaleTable {
+  max-width: 340px;
+  font-variant-numeric: tabular-nums;
 }
 
 @container (width < 660px) {

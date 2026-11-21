@@ -264,13 +264,24 @@ function AssessmentRules({ scheme }: Pick<CourseResult, "scheme">) {
             ? `Зачёт от ${scheme.passPoints} баллов с обязательными работами.`
             : "Сумма компонентов переводится в десятибалльную оценку по порогам."}
         </p>
-        <div className={ui.row}>
-          {scheme.thresholds.map((t) => (
-            <Badge key={t.points}>
-              {t.points}+ баллов → {t.grade}/10
-            </Badge>
-          ))}
-        </div>
+        {scheme.thresholds.length > 0 && (
+          <table className={s.scaleTable} aria-label="Шкала оценивания">
+            <thead>
+              <tr>
+                <th scope="col">Минимум баллов</th>
+                <th scope="col">Оценка из 10</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scheme.thresholds.map(({ points, grade }) => (
+                <tr key={points}>
+                  <td>{points}</td>
+                  <td>{grade}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
         <p className={ui.caption}>
           Сумма ограничена максимумом компонентов. Опубликованный ноль
           отличается от отсутствующего результата. Корректировка посещаемости

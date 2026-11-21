@@ -7,11 +7,11 @@ import {
   Tabs,
   Avatar,
   Empty,
-  ActionLink,
   ui,
 } from "@/shared/ui/primitives";
 import { CopyButton } from "@/shared/ui/CopyButton";
-import { FilterForm, FilterText } from "@/shared/ui/FilterForm";
+import { FilterForm } from "@/shared/ui/FilterForm";
+import { LecturerLink } from "@/shared/ui/LecturerLink";
 import {
   containsText,
   filterHref,
@@ -44,7 +44,7 @@ export default async function PeoplePage({
   const pageHref = (page: number) =>
     filterHref(path, { tab, q, page: page > 1 ? page : undefined });
   const contains = containsText(q);
-  const [teachers, group, departments, total] = await Promise.all([
+  const [teachers, group, departments, total, curator] = await Promise.all([
     teacherTab
       ? db.person.findMany({
           where: {
@@ -77,7 +77,7 @@ export default async function PeoplePage({
     tab === "group"
       ? db.rosterPerson.findMany({
           where: { groupId: student.groupId, name: contains },
-          select: { id: true, name: true },
+          select: { id: true, name: true, avatar: true },
           orderBy: { name: "asc" },
           skip: (page - 1) * 20,
           take: 20,
@@ -94,6 +94,12 @@ export default async function PeoplePage({
           where: { groupId: student.groupId, name: contains },
         })
       : 0,
+    tab === "group" && student.group.curatorId
+      ? db.person.findUnique({
+          where: { id: student.group.curatorId },
+          select: { id: true, name: true },
+        })
+      : null,
   ]);
   return (
     <>
@@ -114,18 +120,27 @@ export default async function PeoplePage({
           href: filterHref(path, { tab: id, q }),
         }))}
       />
-      <FilterForm action={path} className={ui.filterBar}>
+      <FilterForm
+        action={path}
+        className={s.search}
+        aria-label="Поиск людей"
+        resetHref={q || page > 1 ? filterHref(path, { tab }) : undefined}
+      >
         <input type="hidden" name="tab" value={tab} />
-        <label>
-          Поиск
-          <FilterText
-            name="q"
-            value={q}
-            maxLength={80}
-            placeholder="Имя, дисциплина или подразделение"
-          />
-        </label>
-        <button className={ui.button}>Найти</button>
+        <input
+          key={q}
+          name="q"
+          defaultValue={q}
+          maxLength={80}
+          placeholder="Поиск..."
+          aria-label="Поиск"
+        />
+        <button type="submit" className={ui.button}>
+          Найти
+        </button>
+        <button type="reset" className={s.resetSearch}>
+          Сбросить
+        </button>
       </FilterForm>
       {teachers.length > 0 && (
         <ul className={s.teacherList} aria-label="Преподаватели">
@@ -173,11 +188,13 @@ export default async function PeoplePage({
           </nav>
         )}
       {!teacherTab && (
-        <div className={ui.grid2}>
+        <div
+          className={tab === "group" ? `${ui.grid2} ${s.groupGrid}` : ui.grid2}
+        >
           {group.map((p) => (
-            <Card key={p.id}>
+            <Card key={p.id} className={s.groupCard}>
               <div className={ui.row}>
-                <Avatar name={p.name} />
+                <Avatar name={p.name} src={p.avatar} />
                 <div>
                   <h3>{p.name}</h3>
                   <p className={ui.caption}>Студент · {student.group.name}</p>
@@ -211,13 +228,18 @@ export default async function PeoplePage({
         </div>
       )}
       {tab === "group" && (
-        <Card>
+        <Card className={s.groupInfo}>
           <h3>
             {student.group.program.name} · {student.group.year} курс
           </h3>
           <p className={ui.caption}>
-            Куратор: Анна Воронцова. Староста: Арина Фомина (ДП-21), Лидия
-            Данилова (ПИ-22). Личные контакты студентов не публикуются.
+            {curator && (
+              <>
+                Куратор: <LecturerLink {...curator} />.{" "}
+              </>
+            )}
+            Староста: Арина Фомина (ДП-21), Лидия Данилова (ПИ-22). Личные
+            контакты студентов не публикуются.
           </p>
           <div className={ui.row}>
             {page > 1 && (
@@ -237,13 +259,6 @@ export default async function PeoplePage({
         <Empty
           title="Никого не нашли"
           description="Попробуйте другое имя или название."
-          action={
-            q ? (
-              <ActionLink href={filterHref(path, { tab })}>
-                Сбросить поиск
-              </ActionLink>
-            ) : undefined
-          }
         />
       )}
     </>

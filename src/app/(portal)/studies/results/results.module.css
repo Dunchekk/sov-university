@@ -14,13 +14,18 @@
   grid-template-columns:
     minmax(0, 1.65fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr)
     auto;
-  align-items: start;
+  align-items: end;
   gap: var(--space-3);
 }
 
 .filters label,
 .filters select {
   min-width: 0;
+}
+.filterLabel {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
 }
 
 .actions {
@@ -29,7 +34,6 @@
   gap: var(--space-3);
   flex-wrap: wrap;
   font-size: var(--text-sm);
-  margin-block-start: calc(1lh + var(--space-2));
 }
 
 .results {
@@ -141,18 +145,6 @@
   font-size: var(--text-sm);
 }
 
-.next {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-.next strong {
-  color: var(--text-primary);
-}
-
 .retake {
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-control);
@@ -187,7 +179,6 @@
 
   .actions {
     grid-column: 1 / -1;
-    margin-block-start: 0;
   }
 }
 

@@ -1,3 +1,5 @@
+import type { Consultation } from "@/modules/assessment/RetakeConsultation";
+
 export const eventTypes = [
   "LESSON",
   "DEADLINE",
@@ -21,6 +23,7 @@ export type CalendarEvent = {
   title: string;
   description: string;
   exportDescription?: string;
+  consultation?: Consultation & { reason: string };
   startsAt: string | null;
   endsAt: string | null;
   startDate: string | null;

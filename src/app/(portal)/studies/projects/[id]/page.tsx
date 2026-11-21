@@ -1,4 +1,5 @@
 import { DraftFiles } from "@/shared/ui/DraftFiles";
+import { LecturerLink } from "@/shared/ui/LecturerLink";
 import { Check, Clock3, FileText } from "lucide-react";
 import { pageStudent } from "@/server/access";
 import { pageData } from "@/server/page-data";
@@ -36,7 +37,9 @@ export default async function ProjectPage({
             <h2>О работе</h2>
             <p>{p.description}</p>
             <hr />
-            <h3>Руководитель: {p.supervisor.name}</h3>
+            <h3>
+              Руководитель: <LecturerLink {...p.supervisor} />
+            </h3>
             <p className={ui.caption}>{p.supervisor.email}</p>
             {p.organization && <p>{p.organization}</p>}
             <hr />

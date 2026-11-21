@@ -6,10 +6,12 @@ import { filterHref } from "@/shared/lib/filters";
 
 export function FilterForm({
   action,
+  resetHref,
   children,
   ...props
 }: Pick<ComponentProps<"form">, "className" | "aria-label" | "children"> & {
   action: string;
+  resetHref?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -20,6 +22,13 @@ export function FilterForm({
       action={action}
       method="get"
       aria-busy={pending}
+      onReset={
+        resetHref
+          ? () => {
+              startTransition(() => router.push(resetHref, { scroll: false }));
+            }
+          : undefined
+      }
       onChange={(event) => {
         const field = event.target;
         if (

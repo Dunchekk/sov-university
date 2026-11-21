@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode, ButtonHTMLAttributes } from "react";
 import { ArrowUpRight, Inbox } from "lucide-react";
 import s from "./ui.module.css";
@@ -122,7 +123,11 @@ export function SectionTitle({
     </div>
   );
 }
-export function Avatar({ name }: { name: string }) {
+export function Avatar({ name, src }: { name: string; src?: string | null }) {
+  if (src)
+    return (
+      <Image className={s.avatar} src={src} width={40} height={40} alt="" />
+    );
   return (
     <span className={s.avatar} aria-hidden>
       {name

@@ -1,4 +1,6 @@
 import { expect, test } from "./fixtures";
+import { db } from "../../src/server/db";
+import { dateKey } from "../../src/shared/lib/time";
 
 test("the directory shows 30 linked portraits in a single column and searches teaching topics", async ({
   studentPage: page,
@@ -77,4 +79,81 @@ test("a current teacher keeps links to their course and schedule on mobile", asy
   ).toHaveAttribute("href", /^\/studies\/courses\//);
   await page.getByRole("link", { name: "Опубликованное расписание" }).click();
   await expect(page).toHaveURL(/schedules=lecturer(?::|%3A)lecturer-0/);
+});
+
+test("group search and reset keep the group tab, portraits and curator link", async ({
+  studentPage: page,
+}) => {
+  await page.goto("/people?tab=group");
+  const search = page.getByRole("textbox", { name: "Поиск" });
+  const reset = page.getByRole("button", { name: "Сбросить" });
+  await expect(search).toHaveAttribute("placeholder", "Поиск...");
+  await search.fill("черновик");
+  await reset.click();
+  await expect(search).toHaveValue("");
+  await search.fill("Арина");
+  await page.getByRole("button", { name: "Найти" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Арина Фомина" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Тимофей Павлов" }),
+  ).toHaveCount(0);
+  await reset.click();
+  await expect(page).toHaveURL(/\/people\?tab=group$/);
+  await expect(search).toHaveValue("");
+  const student = page.getByRole("heading", { name: "Арина Фомина" });
+  const portrait = student.locator("xpath=ancestor::section[1]").locator("img");
+  await portrait.scrollIntoViewIfNeeded();
+  await expect
+    .poll(() =>
+      portrait.evaluate((image) => (image as HTMLImageElement).naturalWidth),
+    )
+    .toBeGreaterThan(0);
+  await expect(
+    page.getByRole("heading", { name: "Тимофей Павлов" }),
+  ).toBeVisible();
+  const curator = page.getByRole("link", { name: "Анна Сергеевна Воронцова" });
+  await expect(curator).toHaveAttribute("href", "/people/lecturer-0");
+  await curator.click();
+  await expect(page).toHaveURL(/\/people\/lecturer-0$/);
+});
+
+test("teacher names link to their profiles throughout studies and the calendar", async ({
+  studentPage: page,
+}) => {
+  const lecturer = "Анна Сергеевна Воронцова";
+  const href = "/people/lecturer-0";
+  const lesson = await db.lesson.findFirstOrThrow({
+    where: {
+      lecturerId: "lecturer-0",
+      groupId: "d-21",
+      kind: { not: "Экзамен" },
+    },
+    orderBy: { startsAt: "asc" },
+  });
+  for (const path of [
+    "/studies/courses",
+    "/studies/courses/course-0",
+    "/studies/courses/course-0?tab=people",
+    "/studies/projects",
+    "/studies/projects/project-0",
+    `/calendar?view=day&date=${dateKey(lesson.startsAt)}&event=${lesson.id}`,
+  ]) {
+    await page.goto(path);
+    await expect(
+      page.getByRole("link", { name: lecturer, exact: true }).first(),
+    ).toHaveAttribute("href", href);
+  }
+  await page.goto("/calendar");
+  await page.getByRole("button", { name: "Сравнить расписания" }).click();
+  const picker = page.getByRole("dialog", { name: "Сравнение расписаний" });
+  await picker.getByRole("textbox").fill("Воронцова");
+  const checkbox = picker.getByRole("checkbox", {
+    name: /Анна Сергеевна Воронцова/,
+  });
+  await checkbox.click();
+  await expect(checkbox).toBeChecked();
+  await picker.getByRole("link", { name: lecturer }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(lecturer);
 });

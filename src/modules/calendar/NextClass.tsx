@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MapPin, Clock3, Flame } from "lucide-react";
 import { ui } from "@/shared/ui/primitives";
+import { LecturerLink } from "@/shared/ui/LecturerLink";
 import { nextClasses, eventDate } from "./layout";
 import { formatDate, formatTime, dateKey, addDays } from "@/shared/lib/time";
 import type { CalendarEvent } from "./types";
@@ -73,15 +74,7 @@ export function NextClass({
                 <span className={s.nextLecturerAvatar} aria-hidden />
                 <div>
                   <p className={s.nextLecturerName}>
-                    {event.lecturerId ? (
-                      <Link
-                        href={`/people/${encodeURIComponent(event.lecturerId)}`}
-                      >
-                        {event.lecturer}
-                      </Link>
-                    ) : (
-                      event.lecturer
-                    )}
+                    <LecturerLink id={event.lecturerId} name={event.lecturer} />
                   </p>
                   <p className={ui.caption}>Преподаватель</p>
                 </div>

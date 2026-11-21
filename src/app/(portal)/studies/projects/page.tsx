@@ -14,6 +14,7 @@ import { FilterForm, FilterSelect } from "@/shared/ui/FilterForm";
 import { filterValue, type FilterParams } from "@/shared/lib/filters";
 import { formatDate } from "@/shared/lib/time";
 import { statusLabel } from "@/shared/config/statuses";
+import { LecturerLink } from "@/shared/ui/LecturerLink";
 const path = "/studies/projects";
 const kinds = ["Практика", "Курсовая", "ВКР", "Учебный проект"];
 export default async function ProjectsPage({
@@ -39,7 +40,7 @@ export default async function ProjectsPage({
         semester,
       },
       include: {
-        supervisor: { select: { name: true } },
+        supervisor: { select: { id: true, name: true } },
         milestones: {
           where: { completed: false },
           orderBy: { dueAt: "asc" },
@@ -101,7 +102,9 @@ export default async function ProjectsPage({
                 <h2>{p.title}</h2>
                 <ArrowUpRight size={18} />
               </Link>
-              <p className={ui.muted}>Руководитель: {p.supervisor.name}</p>
+              <p className={ui.muted}>
+                Руководитель: <LecturerLink {...p.supervisor} />
+              </p>
               <div className={ui.between}>
                 <Badge tone={p.status === "REVISION" ? "warning" : "default"}>
                   {p.status === "SUBMITTED"
