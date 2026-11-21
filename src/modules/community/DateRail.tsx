@@ -16,22 +16,22 @@ type Day = {
 
 export function DateRail({
   days,
-  focusDate,
+  anchorDate,
   selected,
 }: {
   days: Day[];
-  focusDate: string;
+  anchorDate: string;
   selected?: string;
 }) {
   const track = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const element = track.current;
-    const focus = element?.querySelector<HTMLElement>("[data-anchor]");
-    if (element && focus) {
-      element.scrollLeft = Math.max(0, focus.offsetLeft - 16);
+    const anchor = element?.querySelector<HTMLElement>("[data-anchor]");
+    if (element && anchor) {
+      element.scrollLeft = Math.max(0, anchor.offsetLeft - 16);
     }
-  }, [focusDate]);
+  }, [anchorDate]);
 
   function scroll(direction: number) {
     const element = track.current;
@@ -59,7 +59,7 @@ export function DateRail({
           <div
             key={day.date}
             className={s.dateCell}
-            data-anchor={day.date === focusDate ? "" : undefined}
+            data-anchor={day.date === anchorDate ? "" : undefined}
           >
             <span className={s.month} aria-hidden>
               {day.month}

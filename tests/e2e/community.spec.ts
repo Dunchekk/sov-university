@@ -3,6 +3,32 @@ import { db } from "../../src/server/db";
 import { addDays, dateKey, formatDate } from "../../src/shared/lib/time";
 import { expect, test } from "./fixtures";
 
+test("selecting and clearing a date keeps the rail in place across months", async ({
+  studentPage: page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto("/community?rail=2026-11-28");
+  const rail = page.getByRole("navigation", { name: "Публикации по дате" });
+  const track = rail.locator(":scope > div");
+  const december = rail.getByRole("link", { name: /\b1 декабря 2026/ });
+  const scrollLeft = () => track.evaluate((element) => element.scrollLeft);
+  await expect.poll(scrollLeft).toBeGreaterThan(0);
+  await expect(rail.getByText("ноябрь", { exact: true })).toHaveCount(0);
+  await expect(rail.getByText("декабрь", { exact: true })).toHaveCount(1);
+  await expect(december.locator("..")).toContainText("декабрь");
+  const initialPosition = await scrollLeft();
+  await december.click();
+  await expect(december).toHaveAttribute("aria-current", "date");
+  expect(await scrollLeft()).toBe(initialPosition);
+  await page.getByRole("link", { name: "Все даты", exact: true }).click();
+  await expect(december).not.toHaveAttribute("aria-current", "date");
+  expect(await scrollLeft()).toBe(initialPosition);
+  await page.goBack();
+  await expect(december).toHaveAttribute("aria-current", "date");
+  expect(await scrollLeft()).toBe(initialPosition);
+});
+
 test("community filters publications and opens illustrated details", async ({
   studentPage: page,
   student,

@@ -38,6 +38,7 @@ const filtersSchema = z.object({
   category: z.enum(communityCategories).optional().catch(undefined),
   date: z.iso.date().optional().catch(undefined),
   from: z.iso.date().optional().catch(undefined),
+  rail: z.iso.date().optional().catch(undefined),
 });
 type Filters = z.infer<typeof filtersSchema>;
 
@@ -57,12 +58,12 @@ export default async function CommunityPage({
 }) {
   const student = await pageStudent();
   const filters = filtersSchema.parse(await searchParams);
-  const { tab, city, category, date, from } = filters;
+  const { tab, city, category, date, from, rail } = filters;
   const now = new Date();
   const today = dateKey(now);
-  const focusDate = date ?? from ?? today;
+  const anchorDate = rail ?? date ?? from ?? today;
   const days = Array.from({ length: 36 }, (_, index) => {
-    const key = addDays(focusDate, index - 12);
+    const key = addDays(anchorDate, index - 12);
     const instant = dayStart(key);
     const weekday = formatDate(instant, { weekday: "short" });
     return {
@@ -71,6 +72,7 @@ export default async function CommunityPage({
         ...filters,
         date: key === date ? undefined : key,
         from: undefined,
+        rail: anchorDate,
       }),
       label: formatDate(instant, {
         weekday: "long",
@@ -80,10 +82,9 @@ export default async function CommunityPage({
       }),
       weekday,
       weekend: weekday === "сб" || weekday === "вс",
-      month:
-        index === 0 || key === focusDate || key.endsWith("-01")
-          ? formatDate(instant, { month: "long" })
-          : undefined,
+      month: key.endsWith("-01")
+        ? formatDate(instant, { month: "long" })
+        : undefined,
     };
   });
   const campus = communityCities.findIndex((item) => item === city);
@@ -108,7 +109,7 @@ export default async function CommunityPage({
           <h2>{city ?? "Все города"}</h2>
         </div>
 
-        <DateRail days={days} focusDate={focusDate} selected={date} />
+        <DateRail days={days} anchorDate={anchorDate} selected={date} />
 
         <div className={s.filters}>
           <FeedSelect
@@ -134,6 +135,7 @@ export default async function CommunityPage({
                 ...filters,
                 date: undefined,
                 from: undefined,
+                rail: anchorDate,
               })}
             >
               Все даты
@@ -168,7 +170,7 @@ async function CommunityFeed({
   student: { id: string; groupId: string };
   now: Date;
 }) {
-  const { tab, city, category, date, from } = filters;
+  const { tab, city, category, date, from, rail } = filters;
   const dayRange = date
     ? { gte: dayStart(date), lt: dayStart(addDays(date, 1)) }
     : undefined;
@@ -275,7 +277,7 @@ async function CommunityFeed({
           : "Выберите другой город, категорию или дату."
       }
       action={
-        <FeedLink className={ui.button} href={communityHref({ tab })}>
+        <FeedLink className={ui.button} href={communityHref({ tab, rail })}>
           Сбросить фильтры
         </FeedLink>
       }
