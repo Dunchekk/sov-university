@@ -48,16 +48,18 @@ export default async function CoursePage({
           orderBy: [{ createdAt: "desc" }, { id: "asc" }],
         })
       : [],
-    db.lesson.findMany({
-      where: {
-        courseId: id,
-        groupId: student.groupId,
-        endsAt: { gt: new Date() },
-      },
-      include: { room: true },
-      orderBy: { startsAt: "asc" },
-      take: 12,
-    }),
+    tab === "lessons"
+      ? db.lesson.findMany({
+          where: {
+            courseId: id,
+            groupId: student.groupId,
+            endsAt: { gt: new Date() },
+          },
+          include: { room: true },
+          orderBy: { startsAt: "asc" },
+          take: 12,
+        })
+      : [],
     tab === "people" ? roster(student, id) : null,
   ]);
   return (

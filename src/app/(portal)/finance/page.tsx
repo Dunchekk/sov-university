@@ -19,7 +19,10 @@ export default async function FinancePage({
 }) {
   const student = await pageStudent();
   const { tab = "overview" } = await searchParams;
-  const data = await finances(student);
+  const data = await finances(
+    student,
+    tab === "contracts" || tab === "scholarships" ? tab : "payments",
+  );
   const expected = data.payments.filter((p) => p.status === "EXPECTED");
   const paid = data.payments
     .filter((p) => p.status === "PAID")

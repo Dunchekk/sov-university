@@ -27,17 +27,19 @@ export default async function ServicesPage({
   const query = (p.q ?? "").slice(0, 80);
   const page = Math.max(1, Number(p.page) || 1);
   const [services, requests, count] = await Promise.all([
-    db.service.findMany({
-      where: {
-        active: true,
-        ...(p.category ? { category: p.category } : {}),
-        OR: [
-          { title: { contains: query, mode: "insensitive" } },
-          { keywords: { contains: query, mode: "insensitive" } },
-        ],
-      },
-      orderBy: { title: "asc" },
-    }),
+    p.tab === "requests"
+      ? []
+      : db.service.findMany({
+          where: {
+            active: true,
+            ...(p.category ? { category: p.category } : {}),
+            OR: [
+              { title: { contains: query, mode: "insensitive" } },
+              { keywords: { contains: query, mode: "insensitive" } },
+            ],
+          },
+          orderBy: { title: "asc" },
+        }),
     p.tab === "requests"
       ? db.studentRequest.findMany({
           where: { studentId: student.id },
