@@ -132,7 +132,9 @@ test("services and courses apply real queries and clear empty results", async ({
   studentPage: page,
 }) => {
   await page.goto("/services");
-  const search = page.getByRole("textbox", { name: "Что нужно?" });
+  const search = page.getByRole("textbox", { name: "Поиск услуг" });
+  await expect(search).toHaveAttribute("placeholder", "Поиск...");
+  await expect(page.getByText("Что нужно?", { exact: true })).toHaveCount(0);
   await search.fill("оплата");
   await page
     .getByRole("combobox", { name: "Категория" })
@@ -147,6 +149,10 @@ test("services and courses apply real queries and clear empty results", async ({
   await page.goto("/studies/courses?semester=past");
   const courses = page.locator('main a[href^="/studies/courses/"] h2');
   const courseSearch = page.getByRole("textbox", { name: "Поиск дисциплины" });
+  await expect(courseSearch).toHaveAttribute("placeholder", "Поиск...");
+  await expect(page.getByText("Поиск дисциплины", { exact: true })).toHaveCount(
+    0,
+  );
   await courseSearch.fill("типографика");
   await courseSearch.press("Enter");
   await expect(courses).toHaveText([/типографика/i]);

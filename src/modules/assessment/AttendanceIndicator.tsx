@@ -1,26 +1,28 @@
 "use client";
 import { useState } from "react";
-import { Info } from "lucide-react";
+import { ExclamationMark } from "lucide-react";
 import { Button, ui } from "@/shared/ui/primitives";
 import { Dialog } from "@/shared/ui/Dialog";
 import type { attendanceStats, Scheme } from "./domain";
+import s from "./attendance-indicator.module.css";
 export function attendanceExplanation(
   a: ReturnType<typeof attendanceStats>,
   scheme: Scheme,
 ) {
-  if (!a.total)
-    return "Учтённых занятий пока нет. Будущие и отменённые занятия не считаются пропусками.";
-  let text = `Сейчас ${Math.round(a.percentage!)}%: ${a.present} из ${a.total} учтённых занятий. `;
-  text += scheme.attendancePenalty
-    ? `При посещаемости ниже ${scheme.attendanceThreshold}% итоговая оценка уменьшается на ${scheme.attendancePenalty} балл по десятибалльной шкале. В течение семестра это предварительный риск. `
-    : "Посещаемость отображается для информации и не меняет оценку. ";
+  const rule = scheme.attendancePenalty
+    ? `При посещаемости ниже ${scheme.attendanceThreshold}% итоговая оценка уменьшается на ${scheme.attendancePenalty} балл по десятибалльной шкале. В течение семестра это предварительный риск.`
+    : "Посещаемость отображается для информации и не меняет оценку.";
+  let text =
+    a.percentage === null
+      ? `Учтённых занятий пока нет. ${rule}`
+      : `Сейчас ${Math.round(a.percentage)}%: ${a.present} из ${a.total} учтённых занятий. ${rule}`;
   if (scheme.attendanceThreshold && a.meets === false)
     text +=
       a.needed === null
-        ? "Достичь 100% новыми посещениями после пропуска невозможно. "
-        : `Чтобы достичь ${scheme.attendanceThreshold}%, нужно посетить ещё ${a.needed} занятий подряд; по расписанию осталось ${a.remaining}. ${a.reachable ? "" : "Оставшихся занятий недостаточно — обсудите ситуацию с преподавателем."} `;
+        ? " Достичь 100% новыми посещениями после пропуска невозможно."
+        : ` Чтобы достичь ${scheme.attendanceThreshold}%, нужно посетить ещё ${a.needed} занятий подряд; по расписанию осталось ${a.remaining}.${a.reachable ? "" : " Оставшихся занятий недостаточно — обсудите ситуацию с преподавателем."}`;
   if (a.unrecorded)
-    text += `Данные неполные: не учтено ${a.unrecorded} занятий. `;
+    text += ` Данные неполные: не учтено ${a.unrecorded} занятий.`;
   return text;
 }
 export function AttendanceIndicator({
@@ -46,25 +48,19 @@ export function AttendanceIndicator({
         )}
         <Button
           small
+          className={
+            scheme.attendancePenalty > 0
+              ? `${s.indicator} ${s.penalty}`
+              : s.indicator
+          }
           aria-label="Как посещаемость влияет на результат"
-          title={text}
+          aria-haspopup="dialog"
           onClick={(e) => {
             e.currentTarget.focus();
             setOpen(true);
           }}
-          onFocus={(e) =>
-            e.currentTarget.setAttribute("aria-description", text)
-          }
         >
-          <Info size={14} />
-          {showValue && scheme.attendancePenalty > 0 && (
-            <span
-              className={attendance.meets === false ? ui.warning : ui.muted}
-            >
-              Влияет на оценку
-            </span>
-          )}
-          {!showValue && "Как учитывается посещаемость"}
+          <ExclamationMark size={16} aria-hidden="true" />
         </Button>
       </span>
       <Dialog

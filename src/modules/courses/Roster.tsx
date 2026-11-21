@@ -102,18 +102,15 @@ export function Roster({
   return (
     <div className={ui.stack}>
       <div className={showGroup ? ui.grid3 : ui.grid2}>
-        <label>
-          Найти участника
-          <input
-            disabled={!ready}
-            value={q}
-            maxLength={80}
-            onChange={(event) =>
-              change({ q: event.target.value, page: 1 }, true)
-            }
-            placeholder="Имя"
-          />
-        </label>
+        <input
+          className={ui.searchInput}
+          disabled={!ready}
+          value={q}
+          maxLength={80}
+          onChange={(event) => change({ q: event.target.value, page: 1 }, true)}
+          placeholder="Поиск..."
+          aria-label="Найти участника"
+        />
         <label>
           Роль
           <select

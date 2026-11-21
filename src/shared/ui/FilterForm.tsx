@@ -82,7 +82,10 @@ export function FilterSelect({
 export function FilterText({
   value,
   ...props
-}: Pick<ComponentProps<"input">, "name" | "placeholder" | "maxLength"> & {
+}: Pick<
+  ComponentProps<"input">,
+  "name" | "placeholder" | "maxLength" | "aria-label" | "className"
+> & {
   value: string;
 }) {
   const [text, setText] = useFilterValue(value);

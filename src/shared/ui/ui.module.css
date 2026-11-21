@@ -86,9 +86,13 @@
   gap: var(--space-4);
   margin-bottom: var(--space-6);
 }
-.filterBar > label {
+.filterBar > label,
+.filterBar > .searchInput {
   flex: 0 1 240px;
   max-width: 100%;
+}
+.searchInput {
+  align-self: end;
 }
 .filterBar > label:has(input[type="checkbox"]) {
   flex-basis: auto;

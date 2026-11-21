@@ -138,14 +138,12 @@ export function SchedulePicker({
         Ваше расписание включено. Можно сравнить ещё два опубликованных
         расписания. Личные записи других студентов недоступны.
       </p>
-      <label>
-        Найти группу, преподавателя или аудиторию
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Группа, фамилия или аудитория"
-        />
-      </label>
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Поиск..."
+        aria-label="Найти группу, преподавателя или аудиторию"
+      />
       {saved.length > 0 && (
         <div className={ui.stack}>
           <h3>Избранное</h3>

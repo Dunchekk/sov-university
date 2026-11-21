@@ -68,15 +68,14 @@ export default async function CoursesPage({
       />
       <FilterForm action={path} className={ui.filterBar}>
         <input type="hidden" name="semester" value={semester} />
-        <label className={ui.form}>
-          Поиск дисциплины
-          <FilterText
-            name="q"
-            value={query}
-            maxLength={80}
-            placeholder="Название дисциплины"
-          />
-        </label>
+        <FilterText
+          className={ui.searchInput}
+          name="q"
+          value={query}
+          maxLength={80}
+          placeholder="Поиск..."
+          aria-label="Поиск дисциплины"
+        />
         <button className={ui.button}>Найти</button>
       </FilterForm>
       <div className={ui.stack}>

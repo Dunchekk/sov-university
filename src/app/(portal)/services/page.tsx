@@ -136,15 +136,14 @@ export default async function ServicesPage({
       ) : (
         <div className={ui.stack}>
           <FilterForm action={path} className={ui.filterBar}>
-            <label>
-              Что нужно?
-              <FilterText
-                name="q"
-                value={query}
-                maxLength={80}
-                placeholder="Для работы, оценки, оплата…"
-              />
-            </label>
+            <FilterText
+              className={ui.searchInput}
+              name="q"
+              value={query}
+              maxLength={80}
+              placeholder="Поиск..."
+              aria-label="Поиск услуг"
+            />
             <label>
               Категория
               <FilterSelect name="category" value={category ?? ""}>

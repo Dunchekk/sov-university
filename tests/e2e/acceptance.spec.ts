@@ -272,6 +272,7 @@ test("attendance explanation supports keyboard and returns focus; course and res
   const button = page
     .getByRole("button", { name: "Как посещаемость влияет на результат" })
     .first();
+  await expect(button).toHaveText("");
   await button.focus();
   await expect(button).toBeFocused();
   await page.keyboard.press("Enter");
@@ -280,6 +281,7 @@ test("attendance explanation supports keyboard and returns focus; course and res
   await expect(dialog).toContainText(
     `${Math.round(result.attendance.percentage)}%`,
   );
+  await expect(dialog).toContainText("не меняет оценку");
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
   await expect(button).toBeFocused();
@@ -291,6 +293,17 @@ test("attendance explanation supports keyboard and returns focus; course and res
       })
       .first(),
   ).toBeVisible();
+
+  await page.goto("/studies/courses?q=Проектирование");
+  await expect(button).toHaveText("");
+  await expect(button.locator("svg")).toBeVisible();
+  const warningColor = await button.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { icon: style.color, border: style.borderTopColor };
+  });
+  expect(warningColor.icon).toBe(warningColor.border);
+  await button.click();
+  await expect(dialog).toContainText("При посещаемости ниже 80%");
 });
 
 test("assessment guidance opens only from the question button and closes with Escape or outside click", async ({

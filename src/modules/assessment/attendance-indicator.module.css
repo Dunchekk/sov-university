@@ -1,0 +1,11 @@
+button.indicator {
+  width: 32px;
+  flex: none;
+  padding: 0;
+}
+
+button.penalty,
+button.penalty:hover:not(:disabled) {
+  border-color: var(--warning);
+  color: var(--warning);
+}

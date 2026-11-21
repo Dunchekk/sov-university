@@ -18,7 +18,11 @@ export function LecturerPortrait({
           src={src}
           alt=""
           fill
-          sizes={large ? "(max-width: 600px) 82px, 150px" : "52px"}
+          sizes={
+            large
+              ? "(max-width: 600px) 82px, 150px"
+              : "(max-width: 600px) 60px, 68px"
+          }
           loading={large ? "eager" : "lazy"}
         />
       ) : (

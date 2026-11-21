@@ -140,7 +140,7 @@ export function Search() {
               }
               setQ(event.target.value);
             }}
-            placeholder="Введите запрос"
+            placeholder="Поиск..."
             role="combobox"
             aria-autocomplete="list"
             aria-controls={resultsId}
