@@ -77,19 +77,21 @@ export async function calendarExamPeriod(
     to: addDays(dateKey(_max.startsAt), 1),
   };
 }
-export async function calendarEvents(
+async function calendarLessons(
   student: Pick<StudentContext, "id" | "groupId">,
-  raw: CalendarQuery,
-  options: { includeDeleted?: boolean } = {},
-): Promise<CalendarEvent[]> {
-  const q = calendarQuery.parse(raw);
-  const from = dayStart(q.from),
-    to = dayStart(q.to);
+  q: z.output<typeof calendarQuery>,
+  from: Date,
+  to: Date,
+) {
+  const ownCourses = new Set<string>();
+  if (!q.types.some((type) => type === "LESSON" || type === "EXAM"))
+    return { lessons: [], ownCourses };
+
   const enrollments = await db.enrollment.findMany({
     where: { studentId: student.id },
     select: { courseId: true },
   });
-  const ownCourses = new Set(enrollments.map((e) => e.courseId));
+  for (const enrollment of enrollments) ownCourses.add(enrollment.courseId);
   const own = { groupId: student.groupId, courseId: { in: [...ownCourses] } };
   const other: Prisma.LessonWhereInput[] = q.schedules.map((s) =>
     s.kind === "group"
@@ -98,35 +100,46 @@ export async function calendarEvents(
         ? { lecturerId: s.id }
         : { roomId: s.id },
   );
+  const lessons = await db.lesson.findMany({
+    where: {
+      startsAt: { lt: to },
+      endsAt: { gt: from },
+      AND: [
+        { OR: [own, ...other] },
+        ...(q.course ? [{ courseId: q.course }] : []),
+      ],
+    },
+    include: {
+      room: true,
+      lecturer: true,
+      group: true,
+      changes: { orderBy: { createdAt: "desc" }, take: 10 },
+    },
+    orderBy: { startsAt: "asc" },
+    take: 10001,
+  });
+  return { lessons, ownCourses };
+}
+
+export async function calendarEvents(
+  student: Pick<StudentContext, "id" | "groupId">,
+  raw: CalendarQuery,
+  options: { includeDeleted?: boolean } = {},
+): Promise<CalendarEvent[]> {
+  const q = calendarQuery.parse(raw);
+  const from = dayStart(q.from),
+    to = dayStart(q.to);
   const [
-    lessons,
+    { lessons, ownCourses },
     assessments,
     projects,
     personal,
     imported,
     community,
     payments,
+    retakes,
   ] = await Promise.all([
-    q.types.some((t) => t === "LESSON" || t === "EXAM")
-      ? db.lesson.findMany({
-          where: {
-            startsAt: { lt: to },
-            endsAt: { gt: from },
-            AND: [
-              { OR: [own, ...other] },
-              ...(q.course ? [{ courseId: q.course }] : []),
-            ],
-          },
-          include: {
-            room: true,
-            lecturer: true,
-            group: true,
-            changes: { orderBy: { createdAt: "desc" }, take: 10 },
-          },
-          orderBy: { startsAt: "asc" },
-          take: 10001,
-        })
-      : [],
+    calendarLessons(student, q, from, to),
     q.types.some((t) => t === "DEADLINE" || t === "EXAM")
       ? db.assessment.findMany({
           where: {
@@ -211,19 +224,19 @@ export async function calendarEvents(
           },
         })
       : [],
-  ]);
-  const retakes = q.types.includes("EXAM")
-    ? await db.retake.findMany({
-        where: {
-          enrollment: {
-            studentId: student.id,
-            ...(q.course ? { courseId: q.course } : {}),
+    q.types.includes("EXAM")
+      ? db.retake.findMany({
+          where: {
+            enrollment: {
+              studentId: student.id,
+              ...(q.course ? { courseId: q.course } : {}),
+            },
+            startsAt: { lt: to },
+            endsAt: { gt: from },
           },
-          startsAt: { lt: to },
-          endsAt: { gt: from },
-        },
-      })
-    : [];
+        })
+      : [],
+  ]);
   const result: CalendarEvent[] = [];
   const defaults = {
     description: "",

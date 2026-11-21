@@ -1,7 +1,14 @@
 "use client";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   ChevronLeft,
   ChevronRight,
@@ -38,12 +45,24 @@ import {
   type ScheduleSelection,
 } from "./types";
 import { PersonalForm } from "./PersonalForm";
-import { SchedulePicker } from "./SchedulePicker";
 import { EventTitle } from "./EventTitle";
 import { MiniCalendar } from "./MiniCalendar";
 import { useCalendarScroll } from "./useCalendarScroll";
 import s from "./calendar.module.css";
 const HOUR_HEIGHT = 52;
+const SchedulePicker = dynamic(
+  () => import("./SchedulePicker").then((module) => module.SchedulePicker),
+  {
+    loading: () => (
+      <div
+        className={ui.skeleton}
+        role="status"
+        aria-label="Загрузка расписаний"
+      />
+    ),
+  },
+);
+
 export function Calendar({
   events,
   examPeriod,
@@ -67,19 +86,39 @@ export function Calendar({
     path = usePathname(),
     params = useSearchParams();
   const [connectionsOpen, setConnectionsOpen] = useState(false);
+  const [comparison, setComparison] = useState<"unopened" | "open" | "closed">(
+    "unopened",
+  );
   const [create, setCreate] = useState(false),
     [edit, setEdit] = useState(false),
-    [compare, setCompare] = useState(false),
     [confirmDelete, setConfirmDelete] = useState(false),
     [error, setError] = useState(""),
     [currentTime, setCurrentTime] = useState(now);
-  const range = calendarDataRange(date, view);
+  const { from } = calendarDataRange(date, view);
   const { scrollRef, frameRef, visible, onScroll, move, transitionTo } =
-    useCalendarScroll(date, view, range.from);
-  const days = Array.from(
-    { length: view === "month" ? 42 : view === "week" ? 35 : 29 },
-    (_, i) => addDays(range.from, i),
+    useCalendarScroll(date, view, from);
+  const days = useMemo(
+    () =>
+      Array.from(
+        { length: view === "month" ? 42 : view === "week" ? 35 : 29 },
+        (_, i) => addDays(from, i),
+      ),
+    [from, view],
   );
+  const dayEvents = useMemo(
+    () =>
+      days.map((day) => {
+        const eventsForDay = eventsOnDay(events, day);
+        return {
+          day,
+          events: eventsForDay,
+          allDay: eventsForDay.filter((event) => event.startDate),
+          timed: view === "month" ? [] : timedLayout(eventsForDay, day),
+        };
+      }),
+    [days, events, view],
+  );
+  const today = dateKey(currentTime);
   const visibleDays =
     view === "month"
       ? {
@@ -88,6 +127,16 @@ export function Calendar({
         }
       : visible;
   const selected = events.find((e) => e.id === params.get("event"));
+  const selectEvent = (event: string | null) => {
+    const next = new URLSearchParams(window.location.search);
+    next.delete("finance");
+    if (event === null) next.delete("event");
+    else next.set("event", event);
+    const search = next.toString();
+    const href = search ? `${path}?${search}` : path;
+    if (href !== window.location.pathname + window.location.search)
+      window.history.pushState(null, "", href);
+  };
   const change = (values: Record<string, string | null>) => {
     const next = new URLSearchParams(params);
     next.delete("finance");
@@ -144,7 +193,7 @@ export function Calendar({
         setEdit(false);
         setConfirmDelete(false);
         setError("");
-        change({ event: e.id });
+        selectEvent(e.id);
       }}
       title={`${eventLabels[e.type]}: ${e.title}${e.location ? ` · ${e.location}` : ""}${conflict ? " · Пересечение" : ""}`}
     >
@@ -168,7 +217,7 @@ export function Calendar({
   const refresh = () => {
     setCreate(false);
     setEdit(false);
-    change({ event: null });
+    selectEvent(null);
     router.refresh();
   };
   return (
@@ -197,12 +246,11 @@ export function Calendar({
                     {d}
                   </div>
                 ))}
-                {days.map((day) => {
-                  const list = eventsOnDay(events, day);
+                {dayEvents.map(({ day, events: list }) => {
                   return (
                     <div
                       key={day}
-                      className={`${s.monthDay} ${day === dateKey(currentTime) ? s.today : ""} ${day.slice(0, 7) !== date.slice(0, 7) ? s.outside : ""}`}
+                      className={`${s.monthDay} ${day === today ? s.today : ""} ${day.slice(0, 7) !== date.slice(0, 7) ? s.outside : ""}`}
                     >
                       <button
                         className={s.dayNumber}
@@ -258,7 +306,7 @@ export function Calendar({
                     <div
                       key={day}
                       data-calendar-day={day}
-                      className={`${s.weekday} ${day === dateKey(currentTime) ? s.today : ""}`}
+                      className={`${s.weekday} ${day === today ? s.today : ""}`}
                     >
                       <button
                         className={s.dayNumber}
@@ -280,11 +328,9 @@ export function Calendar({
                     <br />
                     день
                   </small>
-                  {days.map((day) => (
+                  {dayEvents.map(({ day, allDay }) => (
                     <div key={day} data-calendar-day={day}>
-                      {eventsOnDay(events, day)
-                        .filter((e) => e.startDate)
-                        .map((e) => eventButton(e, "allDay"))}
+                      {allDay.map((e) => eventButton(e, "allDay"))}
                     </div>
                   ))}
                 </div>
@@ -304,14 +350,14 @@ export function Calendar({
                       </span>
                     ))}
                   </div>
-                  {days.map((day) => (
+                  {dayEvents.map(({ day, timed }) => (
                     <div
                       key={day}
                       className={s.dayColumn}
                       data-date={day}
                       data-calendar-day={day}
                     >
-                      {timedLayout(eventsOnDay(events, day), day).map((item) =>
+                      {timed.map((item) =>
                         eventButton(
                           item.event,
                           false,
@@ -324,7 +370,7 @@ export function Calendar({
                           item.conflict,
                         ),
                       )}
-                      {day === dateKey(currentTime) && (
+                      {day === today && (
                         <div
                           className={s.nowLine}
                           aria-label="Текущее время"
@@ -350,7 +396,7 @@ export function Calendar({
           <MiniCalendar
             visible={visibleDays}
             examPeriod={examPeriod}
-            today={dateKey(currentTime)}
+            today={today}
             onSelect={(day) =>
               change({
                 date: day,
@@ -463,7 +509,7 @@ export function Calendar({
               aria-label="Сравнить расписания"
               onClick={(e) => {
                 e.currentTarget.focus();
-                setCompare(true);
+                setComparison("open");
               }}
             >
               <SlidersHorizontal size={16} />
@@ -488,20 +534,22 @@ export function Calendar({
         <PersonalForm date={date} onSaved={refresh} />
       </Dialog>
       <Dialog
-        open={compare}
-        onClose={() => setCompare(false)}
+        open={comparison === "open"}
+        onClose={() => setComparison("closed")}
         title="Сравнение расписаний"
       >
-        <SchedulePicker
-          selected={schedules}
-          onSelect={(v) =>
-            change({ schedules: v.map((s) => `${s.kind}:${s.id}`).join(",") })
-          }
-        />
+        {comparison !== "unopened" && (
+          <SchedulePicker
+            selected={schedules}
+            onSelect={(v) =>
+              change({ schedules: v.map((s) => `${s.kind}:${s.id}`).join(",") })
+            }
+          />
+        )}
       </Dialog>
       <Dialog
         open={!!selected}
-        onClose={() => change({ event: null })}
+        onClose={() => selectEvent(null)}
         title={edit ? "Изменить событие" : (selected?.title ?? "Событие")}
         subtitle={
           !edit && selected?.type === "LESSON"

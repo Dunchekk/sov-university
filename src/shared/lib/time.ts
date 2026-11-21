@@ -17,23 +17,36 @@ export function addDays(day: string, n: number) {
 }
 export const atTime = (day: string, time: string) =>
   fromZonedTime(`${day}T${time}:00`, TIMEZONE);
+const dayFormatter = new Intl.DateTimeFormat("ru-RU", {
+  timeZone: TIMEZONE,
+  day: "numeric",
+  month: "long",
+});
+const timeFormatter = new Intl.DateTimeFormat("ru-RU", {
+  timeZone: TIMEZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+});
+const rubleFormatter = new Intl.NumberFormat("ru-RU", {
+  style: "currency",
+  currency: "RUB",
+  maximumFractionDigits: 0,
+});
 export const formatDate = (
   date: Date | string,
-  options: Intl.DateTimeFormatOptions = { day: "numeric", month: "long" },
+  options?: Intl.DateTimeFormatOptions,
 ) =>
   // WebKit capitalizes Russian short weekdays while Node/Chromium do not.
   // Normalize their case to keep server and browser hydration identical.
-  new Intl.DateTimeFormat("ru-RU", { timeZone: TIMEZONE, ...options })
+  (options
+    ? new Intl.DateTimeFormat("ru-RU", { timeZone: TIMEZONE, ...options })
+    : dayFormatter
+  )
     .format(new Date(date))
     .toLocaleLowerCase("ru-RU");
 export const formatTime = (date: Date | string) =>
-  formatDate(date, { hour: "2-digit", minute: "2-digit" });
-export const money = (kopecks: number) =>
-  new Intl.NumberFormat("ru-RU", {
-    style: "currency",
-    currency: "RUB",
-    maximumFractionDigits: 0,
-  }).format(kopecks / 100);
+  timeFormatter.format(new Date(date)).toLocaleLowerCase("ru-RU");
+export const money = (kopecks: number) => rubleFormatter.format(kopecks / 100);
 export function workingDayDeadline(start: Date, count: number) {
   let day = dateKey(start);
   for (let n = 0; n < count; ) {

@@ -9,6 +9,52 @@ const event = (body: string) => `BEGIN:VEVENT\r\n${body}\r\nEND:VEVENT`;
 const fixed =
   "UID:series\r\nDTSTART;TZID=Europe/Berlin:20260322T100000\r\nDURATION:PT1H\r\nRRULE:FREQ=WEEKLY;COUNT=3\r\nEXDATE;TZID=Europe/Berlin:20260329T100000\r\nSUMMARY:Семинар";
 
+test("loaded events use browser history and schedule searches wait for the dialog", async ({
+  studentPage: page,
+}) => {
+  const retake = await db.retake.findUniqueOrThrow({
+    where: { id: "retake-a" },
+  });
+  const day = dateKey(retake.startsAt);
+  const calendarRequests: string[] = [];
+  const scheduleRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === "/calendar" && url.searchParams.get("date") === day)
+      calendarRequests.push(url.search);
+    if (url.pathname.startsWith("/api/schedules/"))
+      scheduleRequests.push(url.pathname);
+  });
+
+  await page.goto(`/calendar?date=${day}&view=week`);
+  const card = page
+    .locator('button[data-type="EXAM"]')
+    .filter({ hasText: retake.title });
+  const dialog = page.getByRole("dialog", { name: retake.title, exact: true });
+  await card.click();
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`event=${retake.id}`));
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page).not.toHaveURL(/event=/);
+  await page.goBack();
+  await expect(dialog).toBeVisible();
+  await page.goForward();
+  await expect(dialog).toBeHidden();
+  expect(calendarRequests).toHaveLength(1);
+  expect(scheduleRequests).toHaveLength(0);
+
+  const searchLoaded = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/schedules/search",
+  );
+  await page.getByRole("button", { name: "Сравнить расписания" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Сравнение расписаний" }),
+  ).toBeVisible();
+  expect((await searchLoaded).ok()).toBe(true);
+  expect(scheduleRequests).toContain("/api/schedules/saved");
+});
+
 test("exam tags match the schedule and the mini calendar marks the session independently of filters", async ({
   studentPage: page,
 }) => {
