@@ -52,7 +52,7 @@ npm run dev
 
 Dev подключается к `127.0.0.1:5438`, хранит файлы в `.data/files`, доступы — `.local/demo-credentials.json`. Полный Compose использует собственный volume файлов: не смешивайте способы seed и хранения. `.env`, `.local`, `.data`, test reports и генерируемый Prisma Client исключены из Git и Docker context.
 
-Для production-сборки на хосте: `npm run build`, затем `npm start`. Docker использует standalone `server.js`. Dev использует поддержанный Webpack для стабильного HMR; production собирается Turbopack. Не запускайте два `next dev` в одном дереве с разными distDir одновременно: их генерируемые типы могут мешать Fast Refresh. После переименования модулей, отличавшихся регистром, при stale HMR удаляется только соответствующая сгенерированная `.next*` директория, не БД и не storage.
+Для production-сборки на хосте выполните `npm run build`, затем `npm start`. Docker использует standalone `server.js`. Dev и production по умолчанию используют Turbopack. Для диагностики несовместимости сборщиков есть `npm run dev:webpack`. Не запускайте два `next dev` в одном дереве с разными distDir: их генерируемые типы могут мешать Fast Refresh. При проблемах с Fast Refresh после переименования модуля удалите соответствующую сгенерированную папку `.next*`.
 
 ## Проверки
 
