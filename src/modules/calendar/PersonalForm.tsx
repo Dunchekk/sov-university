@@ -24,6 +24,9 @@ export function PersonalForm({
   return (
     <form
       className={ui.form}
+      aria-label={
+        event ? "Редактирование личного события" : "Новое личное событие"
+      }
       onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);

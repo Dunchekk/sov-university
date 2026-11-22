@@ -23,6 +23,7 @@ export function SubmissionForm({
   return (
     <form
       className={ui.form}
+      aria-label="Отправка отчёта по проекту"
       onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);
@@ -81,6 +82,7 @@ export function SubmissionForm({
               <Button
                 type="button"
                 small
+                aria-label={`Удалить отчёт «${f.originalName}»`}
                 onClick={async () => {
                   try {
                     await api(`/api/files/${f.id}`, { method: "DELETE" });

@@ -22,6 +22,8 @@ import {
 import { LecturerPortrait } from "./LecturerPortrait";
 import s from "./people.module.css";
 
+export const metadata = { title: "Люди" };
+
 const path = "/people";
 const teacherPageSize = 30;
 export default async function PeoplePage({

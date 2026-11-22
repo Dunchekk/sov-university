@@ -3,6 +3,7 @@
 import { useState, useTransition, type ComponentProps } from "react";
 import { useRouter } from "next/navigation";
 import { filterHref } from "@/shared/lib/filters";
+import { ui } from "./primitives";
 
 export function FilterForm({
   action,
@@ -15,6 +16,13 @@ export function FilterForm({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [applied, setApplied] = useState(false);
+  function update(href: string) {
+    startTransition(() => {
+      setApplied(true);
+      router.push(href, { scroll: false });
+    });
+  }
 
   return (
     <form
@@ -22,13 +30,7 @@ export function FilterForm({
       action={action}
       method="get"
       aria-busy={pending}
-      onReset={
-        resetHref
-          ? () => {
-              startTransition(() => router.push(resetHref, { scroll: false }));
-            }
-          : undefined
-      }
+      onReset={resetHref ? () => update(resetHref) : undefined}
       onChange={(event) => {
         const field = event.target;
         if (
@@ -45,12 +47,13 @@ export function FilterForm({
             String(value),
           ]),
         );
-        startTransition(() =>
-          router.push(filterHref(action, values), { scroll: false }),
-        );
+        update(filterHref(action, values));
       }}
     >
       {children}
+      <span className={ui.srOnly} role="status">
+        {applied && !pending ? "Результаты обновлены." : ""}
+      </span>
     </form>
   );
 }

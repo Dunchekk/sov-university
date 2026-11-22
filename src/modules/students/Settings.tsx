@@ -107,6 +107,7 @@ export function Settings({
                 </Link>
                 <Button
                   small
+                  aria-label={`Убрать расписание «${s.label}»`}
                   onClick={async () => {
                     try {
                       await api("/api/schedules/saved", {

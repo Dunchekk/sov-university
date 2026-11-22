@@ -35,7 +35,11 @@ const DialogContent = memo(
     const heading = (
       <div>
         <h2 id={titleId}>{title}</h2>
-        {subtitle && <p className={s.muted}>{subtitle}</p>}
+        {subtitle && (
+          <p id={`${titleId}-description`} className={s.muted}>
+            {subtitle}
+          </p>
+        )}
       </div>
     );
     return (
@@ -159,6 +163,7 @@ export function Dialog({
       ref={ref}
       className={className ? `${s.dialog} ${className}` : s.dialog}
       aria-labelledby={titleId}
+      aria-describedby={subtitle ? `${titleId}-description` : undefined}
       onCancel={(e) => {
         if (e.target !== e.currentTarget) return;
         e.preventDefault();

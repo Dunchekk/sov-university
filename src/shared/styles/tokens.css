@@ -104,6 +104,14 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 }
+@media (prefers-contrast: more) {
+  :root {
+    --text-muted: var(--text-primary);
+    --text-secondary: var(--text-primary);
+    --border-control: var(--text-primary);
+    --focus-ring: var(--accent);
+  }
+}
 @media (max-width: 760px) {
   :root {
     --header-height: 60px;

@@ -15,6 +15,8 @@ import { dateKey, formatDate } from "@/shared/lib/time";
 import { brand } from "@/shared/config/brand";
 import s from "@/modules/students/profile.module.css";
 
+export const metadata = { title: "Мой профиль" };
+
 const tabs = [
   { id: "overview", label: "Основное", href: "/profile" },
   { id: "documents", label: "Документы", href: "/profile?tab=documents" },

@@ -20,6 +20,9 @@ import {
 import { dateKey, addDays, formatDate, money } from "@/shared/lib/time";
 import { statusLabel } from "@/shared/config/statuses";
 import s from "@/modules/dashboard/dashboard.module.css";
+
+export const metadata = { title: "Главная" };
+
 export default async function Home() {
   const student = await pageStudent();
   const isBudgetStudent = student.funding === "Бюджет";

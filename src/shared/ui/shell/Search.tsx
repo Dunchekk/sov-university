@@ -115,7 +115,6 @@ export function Search() {
           event.currentTarget.focus();
           openSearch();
         }}
-        aria-label="Глобальный поиск"
         aria-haspopup="dialog"
         aria-keyshortcuts="Control+K Meta+K"
       >

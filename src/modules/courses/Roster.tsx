@@ -137,9 +137,9 @@ export function Roster({
           <div className={`${ui.row} ${ui.listItem}`}>
             <Avatar name={teacher.name} />
             <div>
-              <h3>
+              <h2 className={ui.smallHeading}>
                 <LecturerLink {...teacher} />
-              </h3>
+              </h2>
               <p className={ui.caption}>Преподаватель · {teacher.email}</p>
               <p className={ui.caption}>{teacher.consultation}</p>
             </div>
@@ -152,7 +152,7 @@ export function Roster({
                 <div className={`${ui.row} ${ui.listItem}`} key={person.id}>
                   <Avatar name={person.name} src={person.avatar} />
                   <div>
-                    <h3>{person.name}</h3>
+                    <h2 className={ui.smallHeading}>{person.name}</h2>
                     <p className={ui.caption}>Студент · {person.group.name}</p>
                   </div>
                 </div>

@@ -1,6 +1,9 @@
 import { pageStudent } from "@/server/access";
 import { AchievementForm } from "@/modules/achievements/AchievementForm";
 import { PageTitle, Card } from "@/shared/ui/primitives";
+
+export const metadata = { title: "Новое достижение" };
+
 export default async function NewAchievement() {
   await pageStudent();
   return (

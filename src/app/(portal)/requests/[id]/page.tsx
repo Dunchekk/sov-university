@@ -1,3 +1,4 @@
+import { cache } from "react";
 import Link from "next/link";
 import { FileText, Check, Clock3 } from "lucide-react";
 import { pageStudent } from "@/server/access";
@@ -8,16 +9,33 @@ import { PageTitle, Card, Badge, ui } from "@/shared/ui/primitives";
 import { statusLabel } from "@/shared/config/statuses";
 import { formatDate } from "@/shared/lib/time";
 import s from "./request.module.css";
+
+const loadItem = cache(async (id: string) =>
+  pageData(requestDetail(await pageStudent(), id)),
+);
+
+function requestTitle(item: Awaited<ReturnType<typeof loadItem>>) {
+  const snapshot = item.serviceSnapshot as Record<string, unknown> | null;
+  return String(snapshot?.title ?? item.service.title);
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return { title: requestTitle(await loadItem((await params).id)) };
+}
+
 export default async function RequestPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const student = await pageStudent();
   const { id } = await params;
-  const item = await pageData(requestDetail(student, id));
+  const item = await loadItem(id);
   const snapshot = item.serviceSnapshot as Record<string, unknown> | null;
-  const title = String(snapshot?.title ?? item.service.title);
+  const title = requestTitle(item);
   const next = (
     {
       DRAFT: "Заполните и отправьте черновик.",

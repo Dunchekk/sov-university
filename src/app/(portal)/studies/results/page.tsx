@@ -24,6 +24,8 @@ import {
 import s from "./results.module.css";
 import { ResultDisclosure } from "./ResultDisclosure";
 
+export const metadata = { title: "Оценки и посещаемость" };
+
 const path = "/studies/results";
 const tabs = [
   { id: "all", label: "Все результаты" },

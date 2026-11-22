@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { pageStudent } from "@/server/access";
@@ -9,13 +10,8 @@ import { communityAudience } from "@/modules/community/service";
 import { formatDate } from "@/shared/lib/time";
 import s from "@/modules/community/community.module.css";
 
-export default async function NewsPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+const loadNews = cache(async (id: string) => {
   const student = await pageStudent();
-  const { id } = await params;
   const news = await db.newsPost.findFirst({
     where: {
       id,
@@ -24,6 +20,24 @@ export default async function NewsPage({
     },
   });
   if (!news) notFound();
+  return news;
+});
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return { title: (await loadNews((await params).id)).title };
+}
+
+export default async function NewsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const [student, news] = await Promise.all([pageStudent(), loadNews(id)]);
   return (
     <article className={s.detail}>
       <Link href="/community?tab=news" className={s.back}>

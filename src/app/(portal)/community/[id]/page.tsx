@@ -1,3 +1,4 @@
+import { cache } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { pageStudent } from "@/server/access";
@@ -9,14 +10,25 @@ import { PageTitle, Card, Badge, ui } from "@/shared/ui/primitives";
 import { formatDate, formatTime } from "@/shared/lib/time";
 import s from "@/modules/community/community.module.css";
 
+const loadItem = cache(async (id: string) =>
+  pageData(communityEvent(await pageStudent(), id)),
+);
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return { title: (await loadItem((await params).id)).title };
+}
+
 export default async function EventPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const student = await pageStudent();
   const { id } = await params;
-  const event = await pageData(communityEvent(student, id));
+  const event = await loadItem(id);
   return (
     <article className={s.detail}>
       <Link href="/community?tab=events" className={s.back}>

@@ -3,6 +3,9 @@ import { CalendarConnections } from "@/modules/calendar/CalendarConnections";
 import { integrations } from "@/modules/calendar/integrations";
 import { dateKey } from "@/shared/lib/time";
 import { PageTitle, ActionLink } from "@/shared/ui/primitives";
+
+export const metadata = { title: "Календарь с собой" };
+
 export default async function IntegrationsPage() {
   const student = await pageStudent();
   return (

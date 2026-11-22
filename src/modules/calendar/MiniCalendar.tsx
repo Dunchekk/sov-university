@@ -47,7 +47,7 @@ export function MiniCalendar({
   return (
     <section className={s.miniCalendar} aria-label="Выбор даты">
       <div className={s.miniHeading}>
-        <h2>
+        <h2 aria-live="polite" aria-atomic="true">
           {formatDate(`${first}T12:00:00Z`, {
             month: "long",
             year: "numeric",

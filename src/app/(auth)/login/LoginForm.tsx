@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ui } from "@/shared/ui/primitives";
 import { api } from "@/shared/lib/client";
@@ -8,9 +8,11 @@ export function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const titleId = useId();
   return (
     <form
       className={`${ui.card} ${s.form}`}
+      aria-labelledby={titleId}
       onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);
@@ -35,7 +37,9 @@ export function LoginForm() {
         }
       }}
     >
-      <h2 className={s.formTitle}>Личный кабинет студента</h2>
+      <h2 className={s.formTitle} id={titleId}>
+        Личный кабинет студента
+      </h2>
       <label className={s.field}>
         <input
           name="email"

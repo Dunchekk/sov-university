@@ -11,6 +11,9 @@ import { eventTypes } from "@/modules/calendar/types";
 import { dateKey } from "@/shared/lib/time";
 import { filterValue, type FilterParams } from "@/shared/lib/filters";
 import { z } from "zod";
+
+export const metadata = { title: "Календарь" };
+
 export default async function CalendarPage({
   searchParams,
 }: {

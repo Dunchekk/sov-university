@@ -14,6 +14,9 @@ import { formatDate, money } from "@/shared/lib/time";
 import { statusLabel } from "@/shared/config/statuses";
 import { brand } from "@/shared/config/brand";
 import s from "./finance.module.css";
+
+export const metadata = { title: "Финансы" };
+
 export default async function FinancePage({
   searchParams,
 }: {
@@ -97,15 +100,20 @@ export default async function FinancePage({
         </div>
       ) : tab === "payments" ? (
         <Card>
-          <div className={ui.tableWrap}>
-            <table>
+          <div
+            className={ui.tableWrap}
+            role="region"
+            aria-label="Прокрутка таблицы выплат"
+            tabIndex={0}
+          >
+            <table aria-label="История выплат">
               <thead>
                 <tr>
-                  <th>Назначение</th>
-                  <th>Период</th>
-                  <th>Сумма</th>
-                  <th>Дата</th>
-                  <th>Статус</th>
+                  <th scope="col">Назначение</th>
+                  <th scope="col">Период</th>
+                  <th scope="col">Сумма</th>
+                  <th scope="col">Дата</th>
+                  <th scope="col">Статус</th>
                 </tr>
               </thead>
               <tbody>
@@ -152,13 +160,18 @@ export default async function FinancePage({
                 <p className={ui.caption}>Плательщик: {c.payer}</p>
                 <p className={ui.largeNumber}>{money(c.totalKopecks)}</p>
                 <p className={ui.muted}>{c.supplement}</p>
-                <div className={ui.tableWrap}>
-                  <table>
+                <div
+                  className={ui.tableWrap}
+                  role="region"
+                  aria-label={`Прокрутка графика платежей по договору ${c.number}`}
+                  tabIndex={0}
+                >
+                  <table aria-label={`График платежей по договору ${c.number}`}>
                     <thead>
                       <tr>
-                        <th>Срок</th>
-                        <th>Сумма</th>
-                        <th>Состояние</th>
+                        <th scope="col">Срок</th>
+                        <th scope="col">Сумма</th>
+                        <th scope="col">Состояние</th>
                       </tr>
                     </thead>
                     <tbody>

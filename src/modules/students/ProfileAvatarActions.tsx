@@ -27,14 +27,21 @@ export function ProfileAvatarActions({
   const input = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState<"POST" | "DELETE" | null>(null);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [refreshing, startTransition] = useTransition();
   const busy = saving !== null || refreshing;
 
   async function saveAvatar(method: "POST" | "DELETE", body?: FormData) {
     setError("");
+    setMessage("");
     setSaving(method);
     try {
       await api(avatarEndpoint, { method, body });
+      setMessage(
+        method === "DELETE"
+          ? "Фото профиля удалено."
+          : "Фото профиля обновлено.",
+      );
       startTransition(() => router.refresh());
     } catch (error) {
       setError(
@@ -104,6 +111,9 @@ export function ProfileAvatarActions({
                 ? "Изменить фото"
                 : "Загрузить фото"}
           </Button>
+          <span className={ui.srOnly} role="status">
+            {message}
+          </span>
           {error && (
             <p role="alert" className={`${ui.caption} ${ui.error}`}>
               {error}

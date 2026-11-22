@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useId } from "react";
 import { Upload, FileText } from "lucide-react";
 import { api } from "@/shared/lib/client";
 import { ui } from "./primitives";
@@ -16,6 +16,7 @@ export function FileUpload({
     [error, setError] = useState(""),
     [name, setName] = useState("");
   const input = useRef<HTMLInputElement>(null);
+  const limitId = useId();
   return (
     <div className={ui.stack}>
       <label>
@@ -26,6 +27,7 @@ export function FileUpload({
         <input
           ref={input}
           type="file"
+          aria-describedby={limitId}
           accept=".pdf,application/pdf"
           disabled={busy}
           onChange={async (e) => {
@@ -59,11 +61,18 @@ export function FileUpload({
           }}
         />
       </label>
-      <small className={ui.caption}>
+      <small id={limitId} className={ui.caption}>
         {busy
           ? "Загружаем…"
           : "PDF до 10 MiB. Общий лимит — 50 MiB. Только демонстрационные документы."}
       </small>
+      <span className={ui.srOnly} role="status">
+        {busy
+          ? "Загружаем файл…"
+          : name && !error
+            ? `Файл ${name} загружен.`
+            : ""}
+      </span>
       {name && (
         <p className={ui.row}>
           <FileText size={16} />

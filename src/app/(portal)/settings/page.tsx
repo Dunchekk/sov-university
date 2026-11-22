@@ -2,6 +2,9 @@ import { pageStudent } from "@/server/access";
 import { db } from "@/server/db";
 import { Settings } from "@/modules/students/Settings";
 import { PageTitle } from "@/shared/ui/primitives";
+
+export const metadata = { title: "Настройки" };
+
 export default async function SettingsPage() {
   const student = await pageStudent();
   const schedules = await db.savedSchedule.findMany({

@@ -5,7 +5,7 @@ test("header shows the current section and global search filters by category", a
 }) => {
   await page.goto("/community");
   const crumbs = page.getByRole("navigation", { name: "Хлебные крошки" });
-  const trigger = page.getByRole("button", { name: "Глобальный поиск" });
+  const trigger = page.getByRole("button", { name: "Найти в кабинете" });
   await expect(crumbs.locator("[aria-current]")).toHaveText("Все");
   expect((await crumbs.boundingBox())!.x).toBeLessThan(
     (await trigger.boundingBox())!.x,
@@ -97,7 +97,7 @@ test("service aliases match typing and open the correct form from global search"
   studentPage: page,
 }) => {
   await page.goto("/profile?tab=documents");
-  await page.getByRole("button", { name: "Глобальный поиск" }).click();
+  await page.getByRole("button", { name: "Найти в кабинете" }).click();
   const dialog = page.getByRole("dialog", { name: "Поиск по кабинету" });
   const field = dialog.getByRole("combobox");
   await dialog.getByRole("button", { name: "Справки и заявления" }).click();

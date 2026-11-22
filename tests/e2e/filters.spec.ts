@@ -181,7 +181,7 @@ test("opening a notification marks it read from the inbox, bell and global searc
       `Уведомления, непрочитанных: ${totalUnread - 2}`,
     );
 
-    await page.getByRole("button", { name: "Глобальный поиск" }).click();
+    await page.getByRole("button", { name: "Найти в кабинете" }).click();
     await page
       .getByRole("combobox", { name: "Поисковый запрос" })
       .fill(fromSearch.title);

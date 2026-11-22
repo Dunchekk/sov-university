@@ -24,6 +24,9 @@ import { ReadNotification } from "@/modules/community/ReadNotification";
 import { NotificationLink } from "@/modules/community/NotificationLink";
 import { formatDate } from "@/shared/lib/time";
 import s from "./notifications.module.css";
+
+export const metadata = { title: "Уведомления" };
+
 const path = "/notifications";
 const categories = [
   ["SCHEDULE", "Расписание"],
@@ -71,7 +74,11 @@ export default async function NotificationsPage({
         description="Всё, что изменилось и требует твоего внимания."
         action={<ReadNotification />}
       />
-      <FilterForm action={path} className={ui.filterBar}>
+      <FilterForm
+        action={path}
+        className={ui.filterBar}
+        aria-label="Фильтры уведомлений"
+      >
         <label>
           Категория
           <FilterSelect name="category" value={category ?? ""}>
@@ -96,23 +103,22 @@ export default async function NotificationsPage({
               className={s.notification}
               href={n.href}
               unreadId={n.readAt ? undefined : n.id}
-              aria-labelledby={`notification-${n.id}`}
             >
               <div className={ui.row}>
-                <h3 id={`notification-${n.id}`}>{n.title}</h3>
+                <h2 className={ui.smallHeading}>{n.title}</h2>
                 {!n.readAt && <Badge tone="info">Новое</Badge>}
               </div>
               <p className={ui.muted}>{n.body}</p>
-              <small className={ui.caption}>
+              <time className={ui.caption} dateTime={n.createdAt.toISOString()}>
                 {formatDate(n.createdAt, {
                   day: "numeric",
                   month: "long",
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
-              </small>
+              </time>
             </NotificationLink>
-            {!n.readAt && <ReadNotification id={n.id} />}
+            {!n.readAt && <ReadNotification id={n.id} title={n.title} />}
           </div>
         ))}
         {!items.length && (

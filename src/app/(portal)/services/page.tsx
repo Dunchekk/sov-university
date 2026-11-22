@@ -19,6 +19,9 @@ import { catalogSearchSelect } from "@/modules/requests/catalog-search";
 import { statusLabel } from "@/shared/config/statuses";
 import { formatDate } from "@/shared/lib/time";
 import s from "./services.module.css";
+
+export const metadata = { title: "Справки и заявления" };
+
 export default async function ServicesPage({
   searchParams,
 }: {
@@ -78,7 +81,7 @@ export default async function ServicesPage({
               className={`${ui.between} ${ui.listLink}`}
             >
               <div>
-                <h3>{r.service.title}</h3>
+                <h2 className={ui.smallHeading}>{r.service.title}</h2>
                 <p className={ui.caption}>
                   № {String(r.number).padStart(5, "0")} ·{" "}
                   {formatDate(r.updatedAt)}

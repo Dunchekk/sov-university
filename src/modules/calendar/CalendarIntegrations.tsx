@@ -87,7 +87,11 @@ function ExportPanel({ today }: { today: string }) {
     }
   }
   return (
-    <form className={ui.stack} onSubmit={download}>
+    <form
+      className={ui.stack}
+      onSubmit={download}
+      aria-label="Скачать календарь"
+    >
       <h2>Забрать события с собой</h2>
       <p className={ui.muted}>
         Скачайте файл и откройте в любимом календаре. Это снимок выбранных
@@ -215,7 +219,7 @@ function ImportPanel({
   }
   return (
     <div className={ui.stack}>
-      <form onSubmit={prepare} className={ui.stack}>
+      <form onSubmit={prepare} className={ui.stack} aria-label="Импорт событий">
         <h2>Собрать планы в одном месте</h2>
         <p className={ui.muted}>
           Загрузите ICS из другого календаря. Сначала покажем предпросмотр,
@@ -428,7 +432,11 @@ function FeedPanel({
   }
   return (
     <div className={ui.stack}>
-      <form onSubmit={create} className={ui.stack}>
+      <form
+        onSubmit={create}
+        className={ui.stack}
+        aria-label="Новая подписка на календарь"
+      >
         <h2>Календарь, который обновляется</h2>
         <p className={ui.muted}>
           Подписка отдаёт актуальные события за последние 30 и следующие 180

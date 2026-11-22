@@ -3,6 +3,8 @@ import { brand, university } from "@/shared/config/brand";
 import { BrandMark } from "@/shared/ui/BrandMark";
 import s from "./login.module.css";
 
+export const metadata = { title: "Вход в личный кабинет" };
+
 export default function LoginPage() {
   return (
     <main className={s.page}>

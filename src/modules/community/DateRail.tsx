@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { FeedLink } from "./FeedNavigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import s from "./community.module.css";
@@ -24,6 +24,7 @@ export function DateRail({
   selected?: string;
 }) {
   const track = useRef<HTMLDivElement>(null);
+  const dateId = useId();
 
   useEffect(() => {
     const element = track.current;
@@ -67,12 +68,15 @@ export function DateRail({
             <FeedLink
               href={day.href}
               className={s.dateLink}
-              aria-label={day.label}
+              aria-describedby={`${dateId}-${day.date}`}
               aria-current={day.date === selected ? "date" : undefined}
               data-weekend={day.weekend || undefined}
             >
               <strong>{day.date.slice(-2)}</strong>
               <small>{day.weekday}</small>
+              <span id={`${dateId}-${day.date}`} hidden>
+                {day.label}
+              </span>
             </FeedLink>
           </div>
         ))}

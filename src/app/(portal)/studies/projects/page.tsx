@@ -15,6 +15,9 @@ import { filterValue, type FilterParams } from "@/shared/lib/filters";
 import { formatDate } from "@/shared/lib/time";
 import { statusLabel } from "@/shared/config/statuses";
 import { LecturerLink } from "@/shared/ui/LecturerLink";
+
+export const metadata = { title: "Практика и проекты" };
+
 const path = "/studies/projects";
 const kinds = ["Практика", "Курсовая", "ВКР", "Учебный проект"];
 export default async function ProjectsPage({
@@ -64,7 +67,11 @@ export default async function ProjectsPage({
         title="Практика и проекты"
         description="От первой идеи до защиты — каждый этап на своём месте."
       />
-      <FilterForm action={path} className={ui.filterBar}>
+      <FilterForm
+        action={path}
+        className={ui.filterBar}
+        aria-label="Фильтры практики и проектов"
+      >
         <label>
           Тип работы
           <FilterSelect name="kind" value={kind ?? ""}>

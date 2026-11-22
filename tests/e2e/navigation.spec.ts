@@ -6,10 +6,7 @@ test("menu acknowledges a slow transition and preserves browser history", async 
   await page.goto("/services");
   const menu = page.getByRole("complementary", { name: "Основная навигация" });
   const courses = menu.getByRole("link", { name: "Дисциплины" });
-  const overlay = page.getByRole("status", {
-    name: "Загрузка страницы",
-    includeHidden: true,
-  });
+  const overlay = page.locator("[data-navigation-overlay]");
   await expect(overlay).toBeHidden();
   const origin = new URL(page.url()).origin;
   const requestedCourses = (url: URL) => url.pathname === "/studies/courses";
@@ -40,6 +37,9 @@ test("menu acknowledges a slow transition and preserves browser history", async 
     await courses.click();
     await expect(courses.locator('span[aria-hidden="true"]')).toBeVisible();
     await expect(overlay).toHaveCSS("opacity", "1");
+    await expect(
+      page.getByText("Загрузка страницы…", { exact: true }),
+    ).toHaveAttribute("role", "status");
     await expect(
       overlay.getByText("Загрузка...", { exact: true }),
     ).toBeVisible();

@@ -22,6 +22,7 @@ export function DraftFiles({
           {editable && (
             <Button
               small
+              aria-label={`Удалить вложение «${file.originalName}»`}
               onClick={async () => {
                 try {
                   await api(`/api/files/${file.id}`, { method: "DELETE" });

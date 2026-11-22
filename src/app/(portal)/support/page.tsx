@@ -2,6 +2,9 @@ import Link from "next/link";
 import { pageStudent } from "@/server/access";
 import { PageTitle, Card, ui } from "@/shared/ui/primitives";
 import { supportFaq } from "@/shared/config/support";
+
+export const metadata = { title: "Поддержка" };
+
 export default async function SupportPage() {
   await pageStudent();
   return (

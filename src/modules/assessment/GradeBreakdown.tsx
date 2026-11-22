@@ -146,7 +146,7 @@ export function GradeBreakdown({
           </div>
         </Card>
         <Card className={s.summaryCard}>
-          <h3>Посещаемость</h3>
+          <h2 className={ui.smallHeading}>Посещаемость</h2>
           <AttendanceIndicator attendance={attendance} scheme={scheme} />
           <p className={ui.caption}>
             {attendance.present} посещено · {attendance.absent} пропущено ·{" "}
@@ -212,8 +212,13 @@ export function GradeBreakdown({
 
 function AssessmentTable({ assessments }: Pick<CourseResult, "assessments">) {
   return (
-    <div className={ui.tableWrap}>
-      <table className={s.workTable} role="table">
+    <div
+      className={ui.tableWrap}
+      role="region"
+      aria-label="Прокрутка таблицы работ и оценок"
+      tabIndex={0}
+    >
+      <table className={s.workTable} role="table" aria-label="Работы и оценки">
         <thead role="rowgroup">
           <tr role="row">
             <th scope="col">Компонент</th>
@@ -306,13 +311,18 @@ function AttendanceJournal({
         {inline && !records.length ? (
           <p className={ui.caption}>Записей о занятиях пока нет.</p>
         ) : (
-          <div className={ui.tableWrap}>
-            <table>
+          <div
+            className={ui.tableWrap}
+            role="region"
+            aria-label="Прокрутка журнала посещаемости"
+            tabIndex={0}
+          >
+            <table aria-label="Журнал посещаемости">
               <thead>
                 <tr>
-                  <th>Занятие</th>
-                  <th>Дата</th>
-                  <th>Отметка</th>
+                  <th scope="col">Занятие</th>
+                  <th scope="col">Дата</th>
+                  <th scope="col">Отметка</th>
                 </tr>
               </thead>
               <tbody>

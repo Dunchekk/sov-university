@@ -10,6 +10,8 @@ import { formatDate } from "@/shared/lib/time";
 import { Empty, PageTitle, Tabs, ui } from "@/shared/ui/primitives";
 import s from "./rating.module.css";
 
+export const metadata = { title: "Рейтинг" };
+
 const path = "/studies/rating";
 const decimal = new Intl.NumberFormat("ru-RU", {
   minimumFractionDigits: 2,

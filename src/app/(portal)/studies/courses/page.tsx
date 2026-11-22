@@ -21,6 +21,9 @@ import {
 } from "@/shared/lib/filters";
 import { formatDate } from "@/shared/lib/time";
 import s from "./courses.module.css";
+
+export const metadata = { title: "Дисциплины" };
+
 const path = "/studies/courses";
 
 export default async function CoursesPage({
@@ -66,7 +69,11 @@ export default async function CoursesPage({
           },
         ]}
       />
-      <FilterForm action={path} className={ui.filterBar}>
+      <FilterForm
+        action={path}
+        className={ui.filterBar}
+        aria-label="Поиск дисциплин"
+      >
         <input type="hidden" name="semester" value={semester} />
         <FilterText
           className={ui.searchInput}

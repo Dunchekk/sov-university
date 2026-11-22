@@ -28,6 +28,9 @@ export function CopyButton({
         {copied ? <Check size={14} /> : <Copy size={14} />}{" "}
         {copied ? "Скопировано" : label}
       </Button>
+      <span role="status" className={ui.srOnly}>
+        {copied && !error ? "Скопировано в буфер обмена." : ""}
+      </span>
       {error && <small role="alert">{error}</small>}
     </span>
   );

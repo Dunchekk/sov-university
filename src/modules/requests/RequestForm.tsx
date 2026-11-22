@@ -95,6 +95,7 @@ export function RequestForm({
   return (
     <>
       <form
+        aria-label={title}
         ref={form}
         className={ui.form}
         onSubmit={async (e) => {
@@ -114,7 +115,7 @@ export function RequestForm({
         <fieldset disabled={busy} className={ui.fieldset}>
           <div className={ui.alert}>
             <div>
-              <h3>{student.name}</h3>
+              <h2 className={ui.smallHeading}>{student.name}</h2>
               <p className={ui.caption}>
                 {student.program} · {student.group}
               </p>
@@ -128,6 +129,7 @@ export function RequestForm({
               const controlProps = {
                 name: f.key,
                 id: `field-${f.key}`,
+                "aria-required": f.required || undefined,
                 "aria-invalid": !!errors[f.key],
                 "aria-describedby": errors[f.key]
                   ? `error-${f.key}`
@@ -138,7 +140,13 @@ export function RequestForm({
                   key={f.key}
                   className={f.type === "checkbox" ? ui.checkField : ui.field}
                 >
-                  <label htmlFor={`field-${f.key}`}>{f.label}</label>
+                  {f.type === "achievements" ? (
+                    <span id={`label-${f.key}`} className={ui.fieldLabel}>
+                      {f.label}
+                    </span>
+                  ) : (
+                    <label htmlFor={controlProps.id}>{f.label}</label>
+                  )}
                   {f.type === "textarea" ? (
                     <textarea
                       {...controlProps}
@@ -167,7 +175,12 @@ export function RequestForm({
                       onChange={(e) => set(f.key, e.target.checked)}
                     />
                   ) : f.type === "achievements" ? (
-                    <div className={ui.stack}>
+                    <div
+                      className={ui.stack}
+                      role="group"
+                      aria-labelledby={`label-${f.key}`}
+                      aria-describedby={controlProps["aria-describedby"]}
+                    >
                       {opts.length ? (
                         opts.map((o) => (
                           <label key={o.value} className={ui.row}>
@@ -242,6 +255,7 @@ export function RequestForm({
                   <Button
                     type="button"
                     small
+                    aria-label={`Удалить вложение «${file.originalName}»`}
                     onClick={async () => {
                       try {
                         await api(`/api/files/${file.id}`, {

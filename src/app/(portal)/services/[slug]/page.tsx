@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { pageStudent } from "@/server/access";
 import { db } from "@/server/db";
 import { requestDetail } from "@/modules/requests/service";
@@ -7,6 +8,22 @@ import { RequestForm } from "@/modules/requests/RequestForm";
 import { formDefinitions } from "@/modules/requests/forms";
 import { pageData } from "@/server/page-data";
 import { PageTitle, Card, ui } from "@/shared/ui/primitives";
+
+const loadService = cache(async (slug: string) => {
+  await pageStudent();
+  const service = await db.service.findUnique({ where: { slug } });
+  if (!service || !formDefinitions[slug]) notFound();
+  return service;
+});
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  return { title: (await loadService((await params).slug)).title };
+}
+
 export default async function ServicePage({
   params,
   searchParams,
@@ -24,10 +41,9 @@ export default async function ServicePage({
   const { slug } = await params;
   const p = await searchParams;
   const [service, options] = await Promise.all([
-    db.service.findUnique({ where: { slug } }),
+    loadService(slug),
     requestOptions(student),
   ]);
-  if (!service || !formDefinitions[slug]) notFound();
   const draft = p.draft
     ? await pageData(requestDetail(student, p.draft))
     : null;

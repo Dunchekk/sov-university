@@ -82,6 +82,11 @@ export function RequestActions({
       {["NEEDS_INFO", "SUBMITTED", "IN_REVIEW", "READY"].includes(status) && (
         <form
           className={ui.form}
+          aria-label={
+            status === "NEEDS_INFO"
+              ? "Ответ на запрос уточнения"
+              : "Комментарий к обращению"
+          }
           onSubmit={(e) => {
             e.preventDefault();
             void action(status === "NEEDS_INFO" ? "respond" : "comment");

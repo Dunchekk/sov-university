@@ -14,6 +14,9 @@ import { FilterForm, FilterSelect } from "@/shared/ui/FilterForm";
 import { filterValue, type FilterParams } from "@/shared/lib/filters";
 import { statusLabel } from "@/shared/config/statuses";
 import { achievementCategories } from "@/modules/achievements/categories";
+
+export const metadata = { title: "Достижения" };
+
 const path = "/studies/achievements";
 export default async function AchievementsPage({
   searchParams,
@@ -48,7 +51,11 @@ export default async function AchievementsPage({
           </Link>
         }
       />
-      <FilterForm action={path} className={ui.filterBar}>
+      <FilterForm
+        action={path}
+        className={ui.filterBar}
+        aria-label="Фильтры достижений"
+      >
         <label>
           Категория
           <FilterSelect name="category" value={category ?? ""}>

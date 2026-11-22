@@ -68,6 +68,7 @@ export function AchievementForm({
   };
   return (
     <form
+      aria-label={initial ? "Редактирование достижения" : "Новое достижение"}
       className={ui.form}
       onSubmit={async (e) => {
         e.preventDefault();

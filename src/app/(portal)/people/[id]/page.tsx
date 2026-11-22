@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { db } from "@/server/db";
@@ -9,13 +10,8 @@ import { BreadcrumbTitle } from "@/shared/ui/shell/BreadcrumbTitle";
 import { LecturerPortrait } from "../LecturerPortrait";
 import s from "../people.module.css";
 
-export default async function LecturerPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+const loadLecturer = cache(async (id: string) => {
   const student = await pageStudent();
-  const { id } = await params;
   const lecturer = await db.person.findUnique({
     where: { id },
     include: {
@@ -35,6 +31,24 @@ export default async function LecturerPage({
     },
   });
   if (!lecturer) notFound();
+  return lecturer;
+});
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return { title: (await loadLecturer((await params).id)).name };
+}
+
+export default async function LecturerPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const lecturer = await loadLecturer(id);
   const { profile, courses } = lecturer;
   const topics = (profile?.topics.split("\n") ?? []).filter(
     (topic) => !courses.some((course) => course.name === topic),

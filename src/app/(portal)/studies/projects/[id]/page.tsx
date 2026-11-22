@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { DraftFiles } from "@/shared/ui/DraftFiles";
 import { LecturerLink } from "@/shared/ui/LecturerLink";
 import { Check, Clock3, FileText } from "lucide-react";
@@ -8,14 +9,26 @@ import { SubmissionForm } from "@/modules/projects/SubmissionForm";
 import { PageTitle, Card, Badge, ui } from "@/shared/ui/primitives";
 import { formatDate } from "@/shared/lib/time";
 import { statusLabel } from "@/shared/config/statuses";
+
+const loadItem = cache(async (id: string) =>
+  pageData(projectDetail(await pageStudent(), id)),
+);
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return { title: (await loadItem((await params).id)).title };
+}
+
 export default async function ProjectPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const student = await pageStudent();
   const { id } = await params;
-  const p = await pageData(projectDetail(student, id));
+  const p = await loadItem(id);
   const open = ["OPEN", "REVISION"].includes(p.status);
   const late = p.dueAt < new Date();
   return (

@@ -11,7 +11,8 @@ test("selecting and clearing a date keeps the rail in place across months", asyn
   await page.goto("/community?rail=2026-11-28");
   const rail = page.getByRole("navigation", { name: "Публикации по дате" });
   const track = rail.locator(":scope > div");
-  const december = rail.getByRole("link", { name: /\b1 декабря 2026/ });
+  const december = rail.getByRole("link", { name: /^01\s*вт$/ });
+  await expect(december).toHaveAccessibleDescription(/1 декабря 2026/);
   const scrollLeft = () => track.evaluate((element) => element.scrollLeft);
   await expect.poll(scrollLeft).toBeGreaterThan(0);
   await expect(rail.getByText("ноябрь", { exact: true })).toHaveCount(0);
@@ -41,14 +42,20 @@ test("community filters publications and opens illustrated details", async ({
 
   const tabs = page.getByRole("navigation", { name: "Виды публикаций" });
   const feed = page.getByRole("list", { name: "Публикации" });
+  const news = feed.locator('a[href^="/community/news/"]');
+  const selectedEvent = feed.locator('a[href="/community/event-0"]');
   await expect(tabs.getByRole("link", { name: "Все" })).toHaveAttribute(
     "aria-current",
     "page",
   );
-  await expect(feed.getByRole("listitem")).toHaveCount(47);
+  await expect(selectedEvent).toBeVisible();
+  await expect(news.first()).toBeVisible();
   await tabs.getByRole("link", { name: "Новости" }).click();
-  await expect(feed.getByRole("listitem")).toHaveCount(22);
-  await feed.getByRole("link").first().click();
+  await expect(news.first()).toBeVisible();
+  await expect(feed.locator('a:not([href^="/community/news/"])')).toHaveCount(
+    0,
+  );
+  await news.first().click();
   await expect(page).toHaveURL(/\/community\/news\//);
   await expect(page.locator("main article p").nth(1)).toBeVisible();
   const cover = page.locator("main article img");
@@ -106,23 +113,42 @@ test("community filters publications and opens illustrated details", async ({
   ).toBeVisible();
   await page.getByRole("button", { name: /^Категория:/ }).click();
   await page.getByRole("menuitemradio", { name: "Образование" }).click();
-  await expect(feed.getByRole("listitem")).toHaveCount(2);
+  await expect(selectedEvent).toBeVisible();
+  await expect
+    .poll(async () => {
+      const total = await feed.getByRole("listitem").count();
+      const matching = await feed
+        .getByText("Событие · Образование", { exact: true })
+        .count();
+      return total > 0 && matching === total;
+    })
+    .toBe(true);
 
   const day = page
     .getByRole("navigation", { name: "Публикации по дате" })
     .getByRole("link", {
-      name: formatDate(event.startsAt, {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }),
-      exact: true,
+      name: new RegExp(
+        `^${date.slice(-2)}\\s*${formatDate(event.startsAt, { weekday: "short" })}$`,
+      ),
     });
+  await expect(day).toHaveAccessibleDescription(
+    formatDate(event.startsAt, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }),
+  );
   await day.click();
-  await expect(feed.getByRole("listitem")).toHaveCount(1);
   await expect(day).toHaveAttribute("aria-current", "date");
-  await feed.getByRole("link", { name: new RegExp(event.title) }).click();
+  await expect(selectedEvent).toBeVisible();
+  const dates = await feed
+    .locator("time")
+    .evaluateAll((items) =>
+      items.map((item) => (item as HTMLTimeElement).dateTime),
+    );
+  expect(dates.map((value) => dateKey(value))).toEqual(dates.map(() => date));
+  await selectedEvent.click();
   await expect(
     page.getByRole("heading", { name: event.title, level: 1 }),
   ).toBeVisible();

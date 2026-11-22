@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import type { ReactNode, ButtonHTMLAttributes } from "react";
+import type { ReactNode, ComponentProps } from "react";
 import { ArrowUpRight, Inbox } from "lucide-react";
 import { BreadcrumbTitle } from "./shell/BreadcrumbTitle";
 import s from "./ui.module.css";
@@ -10,7 +10,7 @@ export function Button({
   small = false,
   className = "",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
+}: ComponentProps<"button"> & {
   variant?: "default" | "primary" | "danger";
   small?: boolean;
 }) {
@@ -98,15 +98,17 @@ export function Empty({
   title,
   description,
   action,
+  heading: Heading = "h2",
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
+  heading?: "h1" | "h2" | "h3";
 }) {
   return (
     <div className={s.empty}>
-      <Inbox size={28} />
-      <h3>{title}</h3>
+      <Inbox size={28} aria-hidden />
+      <Heading className={s.smallHeading}>{title}</Heading>
       {description && <p>{description}</p>}
       {action}
     </div>
@@ -125,9 +127,15 @@ export function SectionTitle({
     <div className={s.between}>
       <h2>{title}</h2>
       {href && (
-        <Link href={href} className={`${s.row} ${s.caption}`}>
+        <Link
+          href={href}
+          className={`${s.row} ${s.caption}`}
+          aria-label={
+            typeof title === "string" ? `${label} — ${title}` : undefined
+          }
+        >
           {label}
-          <ArrowUpRight size={15} />
+          <ArrowUpRight size={15} aria-hidden />
         </Link>
       )}
     </div>

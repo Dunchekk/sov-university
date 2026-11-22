@@ -26,6 +26,8 @@ import {
 } from "@/modules/community/FeedNavigation";
 import s from "@/modules/community/community.module.css";
 
+export const metadata = { title: "События" };
+
 const sections = [
   ["all", "Все"],
   ["events", "События"],

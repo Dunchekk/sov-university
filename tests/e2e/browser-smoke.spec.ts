@@ -22,7 +22,7 @@ test("header notifications open by the bell, scroll inside the panel and link to
   await page.goto("/");
   const header = page.getByRole("banner");
   const bell = header.getByRole("button", { name: /^Уведомления/ });
-  const search = header.getByRole("button", { name: "Глобальный поиск" });
+  const search = header.getByRole("button", { name: "Найти в кабинете" });
   const panel = header.getByRole("region", { name: "Уведомления" });
   await expect(header).toHaveCSS("background-image", "none");
   await expect(header).toHaveCSS("border-bottom-width", "1px");

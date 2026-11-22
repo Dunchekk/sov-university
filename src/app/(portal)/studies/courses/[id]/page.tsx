@@ -1,3 +1,4 @@
+import { cache } from "react";
 import Link from "next/link";
 import { LecturerLink } from "@/shared/ui/LecturerLink";
 import { ArrowUpRight, MapPin } from "lucide-react";
@@ -22,6 +23,19 @@ import {
   ui,
 } from "@/shared/ui/primitives";
 import { formatDate, formatTime, dateKey } from "@/shared/lib/time";
+
+const loadItem = cache(async (id: string) =>
+  pageData(courseResult(await pageStudent(), id)),
+);
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return { title: (await loadItem((await params).id)).enrollment.course.name };
+}
+
 export default async function CoursePage({
   params,
   searchParams,
@@ -35,7 +49,7 @@ export default async function CoursePage({
   const tab =
     courseTabs.find(([id]) => id === filterValue(query.tab))?.[0] ?? "overview";
   const participants = rosterFilters(query);
-  const result = await pageData(courseResult(student, id));
+  const result = await loadItem(id);
   const course = result.enrollment.course;
   const [files, lessons, people] = await Promise.all([
     tab === "materials"

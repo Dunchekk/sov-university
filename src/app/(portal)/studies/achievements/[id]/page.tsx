@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { DraftFiles } from "@/shared/ui/DraftFiles";
 import { pageStudent } from "@/server/access";
 import { pageData } from "@/server/page-data";
@@ -5,14 +6,26 @@ import { achievementDetail } from "@/modules/achievements/service";
 import { AchievementForm } from "@/modules/achievements/AchievementForm";
 import { PageTitle, Card, Badge, ui } from "@/shared/ui/primitives";
 import { statusLabel } from "@/shared/config/statuses";
+
+const loadItem = cache(async (id: string) =>
+  pageData(achievementDetail(await pageStudent(), id)),
+);
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return { title: (await loadItem((await params).id)).title };
+}
+
 export default async function AchievementPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const student = await pageStudent();
   const { id } = await params;
-  const item = await pageData(achievementDetail(student, id));
+  const item = await loadItem(id);
   return (
     <>
       <PageTitle

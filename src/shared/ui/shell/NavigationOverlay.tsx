@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ui } from "../primitives";
 import s from "./shell.module.css";
 
 const showAfter = 400;
@@ -31,23 +32,28 @@ export function NavigationOverlay({
   }, [pending]);
 
   return (
-    <div
-      role="status"
-      aria-label="Загрузка страницы"
-      data-prepared={prepared ? "" : undefined}
-      data-visible={visible ? "" : undefined}
-      className={s.navigationOverlay}
-    >
-      <div className={s.navigationIndicator} aria-hidden>
-        <p className={s.navigationLabel}>
-          Загрузка
-          <span className={s.navigationDots}>
-            <span>.</span>
-            <span>.</span>
-            <span>.</span>
-          </span>
-        </p>
+    <>
+      <span className={ui.srOnly} role="status">
+        {visible ? "Загрузка страницы…" : ""}
+      </span>
+      <div
+        aria-hidden
+        data-navigation-overlay
+        data-prepared={prepared ? "" : undefined}
+        data-visible={visible ? "" : undefined}
+        className={s.navigationOverlay}
+      >
+        <div className={s.navigationIndicator}>
+          <p className={s.navigationLabel}>
+            Загрузка
+            <span className={s.navigationDots}>
+              <span>.</span>
+              <span>.</span>
+              <span>.</span>
+            </span>
+          </p>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

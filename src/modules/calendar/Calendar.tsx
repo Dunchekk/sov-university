@@ -1,6 +1,7 @@
 "use client";
 import {
   useEffect,
+  useId,
   useMemo,
   useOptimistic,
   useState,
@@ -221,43 +222,66 @@ export function Calendar({
       change({ date: d.toISOString().slice(0, 10), event: null });
     } else move(direction);
   };
+  const eventDescriptionPrefix = useId();
   const eventButton = (
     e: CalendarEvent,
+    day: string,
     compact: false | "month" | "allDay" = false,
     style?: CSSProperties,
     conflict = false,
-  ) => (
-    <button
-      key={e.id}
-      className={`${s.event} ${compact ? s.compact : ""} ${compact === "month" ? s.monthEvent : ""} ${style ? s.timedEvent : ""} ${e.cancelled ? s.cancelled : ""} ${e.comparison ? s.comparison : ""}`}
-      data-type={e.type}
-      style={style}
-      onClick={(click) => {
-        click.currentTarget.focus();
-        setEdit(false);
-        setConfirmDelete(false);
-        setError("");
-        selectEvent(e.id);
-      }}
-      title={`${eventLabels[e.type]}: ${e.title}${e.location ? ` · ${e.location}` : ""}${conflict ? " · Пересечение" : ""}`}
-    >
-      {compact === "month" ? (
-        <strong>{e.title}</strong>
-      ) : (
-        <>
-          <EventTitle event={e} />
-          {!compact && (
-            <small>
-              {e.startsAt
-                ? `${formatTime(e.startsAt)}–${formatTime(e.endsAt!)}`
-                : "Весь день"}
-            </small>
-          )}
-        </>
-      )}
-      {!compact && e.comparison && e.group && <small>{e.group}</small>}
-    </button>
-  );
+  ) => {
+    const descriptionId = `${eventDescriptionPrefix}-${day}-${encodeURIComponent(e.id)}`;
+    return (
+      <button
+        key={e.id}
+        className={`${s.event} ${compact ? s.compact : ""} ${compact === "month" ? s.monthEvent : ""} ${style ? s.timedEvent : ""} ${e.cancelled ? s.cancelled : ""} ${e.comparison ? s.comparison : ""}`}
+        data-type={e.type}
+        style={style}
+        aria-haspopup="dialog"
+        aria-describedby={descriptionId}
+        onClick={(click) => {
+          click.currentTarget.focus();
+          setEdit(false);
+          setConfirmDelete(false);
+          setError("");
+          selectEvent(e.id);
+        }}
+        title={`${eventLabels[e.type]}: ${e.title}${e.location ? ` · ${e.location}` : ""}${conflict ? " · Пересечение" : ""}`}
+      >
+        {compact === "month" ? (
+          <strong>{e.title}</strong>
+        ) : (
+          <>
+            <EventTitle event={e} />
+            {!compact && (
+              <small>
+                {e.startsAt
+                  ? `${formatTime(e.startsAt)}–${formatTime(e.endsAt!)}`
+                  : "Весь день"}
+              </small>
+            )}
+          </>
+        )}
+        {!compact && e.comparison && e.group && <small>{e.group}</small>}
+        <span hidden id={descriptionId}>
+          {[
+            eventLabels[e.type],
+            formatDate(`${day}T12:00:00Z`),
+            compact &&
+              (e.startsAt && e.endsAt
+                ? `${formatTime(e.startsAt)}–${formatTime(e.endsAt)}`
+                : "Весь день"),
+            compact === "month" && e.location,
+            e.cancelled && "Отменено",
+            e.comparison && "Дополнительное расписание",
+            conflict && "Пересечение по времени",
+          ]
+            .filter(Boolean)
+            .join(". ")}
+        </span>
+      </button>
+    );
+  };
   const refresh = () => {
     setCreate(false);
     setEdit(false);
@@ -274,7 +298,8 @@ export function Calendar({
         >
           <div className={s.scheduleHeading}>
             <h1>Календарь</h1>
-            <p aria-label="Видимые даты">
+            <p aria-live="polite" aria-atomic="true">
+              <span className={ui.srOnly}>Период календаря: </span>
               {formatDate(`${visibleDays.from}T12:00:00Z`, {
                 day: "numeric",
                 month: "short",
@@ -303,16 +328,20 @@ export function Calendar({
                       <button
                         className={s.dayNumber}
                         aria-label={`Открыть ${formatDate(`${day}T12:00:00Z`)}`}
+                        aria-current={day === today ? "date" : undefined}
                         onClick={() =>
                           change({ date: day, view: "day", event: null })
                         }
                       >
                         {Number(day.slice(-2))}
                       </button>
-                      {list.slice(0, 3).map((e) => eventButton(e, "month"))}
+                      {list
+                        .slice(0, 3)
+                        .map((e) => eventButton(e, day, "month"))}
                       {list.length > 3 && (
                         <button
                           className={s.more}
+                          aria-label={`Ещё ${list.length - 3} · ${formatDate(dayStart(day))}`}
                           onClick={() =>
                             change({ date: day, view: "day", event: null })
                           }
@@ -358,6 +387,7 @@ export function Calendar({
                     >
                       <button
                         className={s.dayNumber}
+                        aria-current={day === today ? "date" : undefined}
                         onClick={() =>
                           change({ date: day, view: "day", event: null })
                         }
@@ -378,7 +408,7 @@ export function Calendar({
                   </small>
                   {dayEvents.map(({ day, allDay }) => (
                     <div key={day} data-calendar-day={day}>
-                      {allDay.map((e) => eventButton(e, "allDay"))}
+                      {allDay.map((e) => eventButton(e, day, "allDay"))}
                     </div>
                   ))}
                 </div>
@@ -408,6 +438,7 @@ export function Calendar({
                       {timed.map((item) =>
                         eventButton(
                           item.event,
+                          day,
                           false,
                           {
                             "--event-top": `${(item.start * HOUR_HEIGHT) / 60}px`,
@@ -421,7 +452,7 @@ export function Calendar({
                       {day === today && (
                         <div
                           className={s.nowLine}
-                          aria-label="Текущее время"
+                          aria-hidden
                           style={
                             {
                               "--now-top": `${(((new Date(currentTime).getTime() - dayStart(day).getTime()) / 60000) * HOUR_HEIGHT) / 60}px`,

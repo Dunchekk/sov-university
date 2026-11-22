@@ -11,6 +11,9 @@ import {
 } from "@/shared/ui/primitives";
 import { filterValue, type FilterParams } from "@/shared/lib/filters";
 import s from "./curriculum.module.css";
+
+export const metadata = { title: "Учебный план" };
+
 export default async function CurriculumPage({
   searchParams,
 }: {
@@ -91,8 +94,16 @@ export default async function CurriculumPage({
         }))}
       />
       <Card>
-        <div className={ui.tableWrap}>
-          <table className={s.table}>
+        <div
+          className={ui.tableWrap}
+          role="region"
+          aria-label="Прокрутка учебного плана"
+          tabIndex={0}
+        >
+          <table
+            className={s.table}
+            aria-label={`Учебный план, семестр ${semester}`}
+          >
             <colgroup>
               <col className={s.disciplineColumn} />
               <col className={s.categoryColumn} />

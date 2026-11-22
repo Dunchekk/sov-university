@@ -2,6 +2,8 @@
 import {
   Suspense,
   useEffect,
+  useId,
+  useRef,
   useState,
   type Dispatch,
   type ReactNode,
@@ -26,7 +28,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { Avatar, Button } from "../primitives";
+import { Avatar, Button, ui } from "../primitives";
 import { BrandMark } from "../BrandMark";
 import { PageContainer } from "../PageContainer";
 import { Search } from "./Search";
@@ -92,6 +94,12 @@ export function Shell({
   children: ReactNode;
 }) {
   const path = usePathname();
+  const sidebarId = useId();
+  const studyId = useId();
+  const sidebar = useRef<HTMLElement>(null);
+  const mobileMenu = useRef<HTMLButtonElement>(null);
+  const [firstName, surname] = name.split(" ");
+  const profileName = surname ? `${firstName} ${surname[0]}.` : firstName;
   const [collapsed, setCollapsed] = useState(initial),
     [mobile, setMobile] = useState(false),
     [feedbackOpen, setFeedbackOpen] = useState(false),
@@ -100,6 +108,22 @@ export function Shell({
     [loaderPrepared, setLoaderPrepared] = useState(false),
     [pendingLinks, setPendingLinks] = useState(0),
     [error, setError] = useState("");
+  useEffect(() => {
+    if (!mobile) return;
+    const media = matchMedia("(max-width:760px)");
+    sidebar.current?.querySelector<HTMLAnchorElement>("a")?.focus({
+      preventScroll: true,
+    });
+    const closeOnDesktop = (event: MediaQueryListEvent) => {
+      if (!event.matches) setMobile(false);
+    };
+    media.addEventListener("change", closeOnDesktop);
+    return () => media.removeEventListener("change", closeOnDesktop);
+  }, [mobile]);
+  function closeMobileMenu() {
+    setMobile(false);
+    mobileMenu.current?.focus({ preventScroll: true });
+  }
   const active = (href: string) =>
     path === href || (href !== "/" && path.startsWith(`${href}/`));
   const studySection = study.find(([href]) => active(href));
@@ -128,7 +152,7 @@ export function Shell({
       aria-label={collapsed ? label : undefined}
       title={collapsed ? label : undefined}
     >
-      <Icon size={19} strokeWidth={1.7} />
+      <Icon size={19} strokeWidth={1.7} aria-hidden />
       <span className={s.label}>{label}</span>
       {href !== path && <NavigationPending setPendingLinks={setPendingLinks} />}
     </Link>
@@ -136,8 +160,21 @@ export function Shell({
   return (
     <div
       className={`${s.shell} ${collapsed ? s.collapsed : ""} ${mobile ? s.mobileOpen : ""}`}
+      onKeyDown={(event) => {
+        if (!mobile || event.defaultPrevented || event.key !== "Escape") return;
+        event.preventDefault();
+        closeMobileMenu();
+      }}
     >
-      <aside className={s.sidebar} aria-label="Основная навигация">
+      <a className={`${ui.button} ${s.skipLink}`} href="#main">
+        Перейти к основному содержанию
+      </a>
+      <aside
+        ref={sidebar}
+        id={sidebarId}
+        className={s.sidebar}
+        aria-label="Основная навигация"
+      >
         <Link {...sidebarLink("/")} className={s.brand} aria-label={brand.name}>
           <BrandMark />
           <span className={s.label}>{brand.name}</span>
@@ -148,7 +185,8 @@ export function Shell({
         <Link
           {...sidebarLink("/profile")}
           className={s.profile}
-          aria-label="Мой профиль"
+          aria-label={`Мой профиль — ${profileName} ${group} · 2 курс`}
+          aria-current={path === "/profile" ? "page" : undefined}
         >
           <Avatar
             name={name}
@@ -156,16 +194,14 @@ export function Shell({
             unoptimized={avatar?.startsWith(avatarEndpoint)}
           />
           <div className={s.profileText}>
-            <strong>
-              {name.split(" ")[0]} {name.split(" ")[1]?.slice(0, 1)}.
-            </strong>
+            <strong>{profileName}</strong>
             <small>{group} · 2 курс</small>
           </div>
           {path !== "/profile" && (
             <NavigationPending setPendingLinks={setPendingLinks} />
           )}
         </Link>
-        <nav className={s.nav}>
+        <nav className={s.nav} aria-label="Разделы кабинета">
           {nav.slice(0, 2).map((n) => item(n.href, n.label, n.icon))}
           <button
             className={s.groupButton}
@@ -174,13 +210,14 @@ export function Shell({
               setExpanded((v) => !v);
             }}
             aria-expanded={expanded}
+            aria-controls={studyId}
             aria-label="Учёба"
           >
-            <GraduationCap size={19} />
+            <GraduationCap size={19} aria-hidden />
             <span className={s.label}>Учёба</span>
-            <ChevronDown size={14} className={s.label} />
+            <ChevronDown size={14} className={s.label} aria-hidden />
           </button>
-          <div className={s.subnav} hidden={!expanded}>
+          <div id={studyId} className={s.subnav} hidden={!expanded}>
             {study.map(([href, label]) => (
               <Link
                 {...sidebarLink(href)}
@@ -242,9 +279,12 @@ export function Shell({
         <div className={s.workspace}>
           <header className={s.header}>
             <Button
+              ref={mobileMenu}
               className={s.mobileMenu}
               aria-label={mobile ? "Закрыть меню" : "Открыть меню"}
-              onClick={() => setMobile((v) => !v)}
+              aria-expanded={mobile}
+              aria-controls={sidebarId}
+              onClick={() => (mobile ? closeMobileMenu() : setMobile(true))}
             >
               {mobile ? <X size={19} /> : <Menu size={19} />}
             </Button>
