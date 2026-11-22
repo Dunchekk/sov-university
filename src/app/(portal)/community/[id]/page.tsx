@@ -24,6 +24,7 @@ export default async function EventPage({
       </Link>
       <PageTitle
         title={event.title}
+        breadcrumb={{ path: `/community/${encodeURIComponent(id)}` }}
         description={`${event.city} · ${formatDate(event.startsAt)} · ${formatTime(event.startsAt)}–${formatTime(event.endsAt)}`}
         action={<Badge tone="success">{event.category}</Badge>}
       />
@@ -49,9 +50,11 @@ export default async function EventPage({
             </p>
           )}
           <EventActions
+            key={id}
             id={id}
-            saved={event.savedBy[0]?.saved ?? false}
-            inCalendar={event.savedBy[0]?.inCalendar ?? false}
+            initialSelection={
+              event.savedBy[0] ?? { saved: false, inCalendar: false }
+            }
           />
         </div>
       </Card>

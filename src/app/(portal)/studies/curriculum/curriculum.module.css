@@ -1,0 +1,29 @@
+.progressCard {
+  margin-block-end: var(--space-5);
+}
+.table {
+  table-layout: fixed;
+  min-width: 860px;
+}
+.disciplineColumn {
+  width: 32%;
+}
+.categoryColumn {
+  width: 18%;
+}
+.creditsColumn {
+  width: 13%;
+}
+.assessmentColumn {
+  width: 11%;
+}
+.progressColumn {
+  width: 26%;
+}
+.table td {
+  overflow-wrap: anywhere;
+}
+.table td:last-child > span {
+  max-width: 100%;
+  white-space: normal;
+}

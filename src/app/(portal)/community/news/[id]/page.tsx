@@ -31,6 +31,7 @@ export default async function NewsPage({
       </Link>
       <PageTitle
         title={news.title}
+        breadcrumb={{ path: `/community/news/${encodeURIComponent(id)}` }}
         description={`${news.city} · ${formatDate(news.publishedAt)} · ${news.author}`}
         action={<Badge>{news.category}</Badge>}
       />

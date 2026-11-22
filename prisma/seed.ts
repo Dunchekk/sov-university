@@ -5,11 +5,12 @@ import { seedCompletedCourses } from "./seed-completed-courses";
 import { seedAcademicEdition } from "./seed-academic-edition";
 import { seedCourseMaterials } from "./seed-course-materials";
 import { seedLecturers } from "./seed-lecturers";
+import { seedContractStudentRequests } from "./seed-requests";
 import { db } from "../src/server/db";
 import { hashPassword } from "../src/server/password";
 import { addDays, atTime, dateKey } from "../src/shared/lib/time";
 import { catalog } from "../src/modules/requests/catalog";
-import { demoPdf } from "./demo-pdf";
+import { demoPdf, tuitionContractDocument } from "./demo-pdf";
 import { randomBytes, createHash } from "node:crypto";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -41,11 +42,12 @@ async function main() {
     const exists = await db.fileObject.findUnique({ where: { id } });
     if (exists && !process.env.REGENERATE_DEMO_FILES) return exists;
     const bytes = await demoPdf(title, lines);
-    const storageKey = `seed-${id}`;
+    const storageKey = exists?.storageKey ?? `seed-${id}`;
     await writeFile(join(storage, storageKey), bytes, { mode: 0o600 });
     return db.fileObject.upsert({
       where: { id },
       update: {
+        originalName: `${title}.pdf`,
         size: bytes.length,
         checksum: createHash("sha256").update(bytes).digest("hex"),
       },
@@ -127,6 +129,7 @@ async function main() {
           name,
           email,
           emailVerified: true,
+          image: id === "student-a" ? "/people/students/roster-24.webp" : null,
           accounts: {
             create: {
               id: `account-${id}`,
@@ -818,7 +821,7 @@ async function main() {
         date: day((i - 3) * 30),
       },
     });
-  await db.contract.upsert({
+  const contract = await db.contract.upsert({
     where: { id: "contract-b" },
     update: {},
     create: {
@@ -845,18 +848,16 @@ async function main() {
         paid: i === 0,
       },
     });
-  await pdf(
-    "contract-file",
-    "Демонстрационный договор",
-    [
-      "Договор DEMO-ПИ-2026/022.",
-      "Программа: Программная инженерия.",
-      "Стоимость учебного года: 320 000 рублей.",
-      "График: четыре платежа по 80 000 рублей.",
-      "Документ не создаёт обязательств и не содержит платёжных реквизитов.",
-    ],
-    { studentId: "student-b", contractId: "contract-b", purpose: "CONTRACT" },
-  );
+  const contractPayments = await db.paymentSchedule.findMany({
+    where: { contractId: contract.id },
+    orderBy: { dueAt: "asc" },
+  });
+  const document = tuitionContractDocument(contract, contractPayments);
+  await pdf("contract-file", document.title, document.lines, {
+    studentId: contract.studentId,
+    contractId: contract.id,
+    purpose: "CONTRACT",
+  });
   await seedCommunity(base);
   await db.savedEvent.upsert({
     where: {
@@ -930,6 +931,7 @@ async function main() {
   );
 }
 main()
+  .then(seedContractStudentRequests)
   .then(academicExtras)
   .then(seedCompletedCourses)
   .then(seedAcademicEdition)

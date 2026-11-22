@@ -251,8 +251,7 @@
   margin-inline-start: auto;
 }
 .saved[aria-current="page"] {
-  border-color: var(--border-control);
-  background: var(--bg-subtle);
+  background: var(--bg-hover);
 }
 
 .feed {
@@ -395,6 +394,19 @@
   gap: var(--space-3);
   max-width: 66ch;
   line-height: 1.7;
+}
+.actionButton {
+  justify-content: flex-start;
+}
+.actionLabel {
+  display: grid;
+  text-align: start;
+}
+.actionLabel > span {
+  grid-area: 1 / 1;
+}
+.actionLabel > [aria-hidden="true"] {
+  visibility: hidden;
 }
 
 @container (max-width: 790px) {

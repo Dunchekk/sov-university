@@ -50,7 +50,10 @@ export function CommunityStrip({ items }: { items: Highlight[] }) {
   }
 
   return (
-    <section aria-labelledby="community-highlights-title">
+    <section
+      className={s.community}
+      aria-labelledby="community-highlights-title"
+    >
       <h2 id="community-highlights-title" className={s.communityHeading}>
         <Link href="/community" className={s.communityLink}>
           За пределами пар <ArrowUpRight size={17} aria-hidden />

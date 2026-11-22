@@ -22,6 +22,7 @@ export default async function ProjectPage({
     <>
       <PageTitle
         title={p.title}
+        breadcrumb={{ path: `/studies/projects/${encodeURIComponent(id)}` }}
         description={`${p.kind} · ${p.semester} семестр · ${formatDate(p.startsAt)}–${formatDate(p.dueAt)}`}
         action={
           <Badge tone={p.status === "REVISION" ? "warning" : "info"}>

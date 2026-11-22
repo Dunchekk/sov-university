@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     default: `${brand.name} — личный кабинет`,
     template: `%s · ${brand.name}`,
   },
-  description: "Учёба, расписание и важное — рядом.",
+  description: `Личный кабинет студента · ${brand.university}`,
   robots: { index: false, follow: false },
 };
 export default async function RootLayout({

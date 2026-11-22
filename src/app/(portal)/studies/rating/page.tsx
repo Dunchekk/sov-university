@@ -28,7 +28,14 @@ export default async function RatingPage({
 
   return (
     <>
-      <PageTitle title="Рейтинг" description={student.group.program.name} />
+      <PageTitle
+        title="Рейтинг"
+        description={student.group.program.name}
+        breadcrumb={{
+          path,
+          label: `${rating.selected}/${rating.selected + 1}`,
+        }}
+      />
       <Tabs
         active={String(rating.selected)}
         items={rating.years.map((year) => ({

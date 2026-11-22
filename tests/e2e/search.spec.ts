@@ -92,3 +92,67 @@ test("search by request number only returns the signed-in student's request", as
   expect(otherResponse.ok()).toBe(true);
   expect(await otherResponse.json()).toEqual([]);
 });
+
+test("service aliases match typing and open the correct form from global search", async ({
+  studentPage: page,
+}) => {
+  await page.goto("/profile?tab=documents");
+  await page.getByRole("button", { name: "Глобальный поиск" }).click();
+  const dialog = page.getByRole("dialog", { name: "Поиск по кабинету" });
+  const field = dialog.getByRole("combobox");
+  await dialog.getByRole("button", { name: "Справки и заявления" }).click();
+  await field.fill("об обу");
+  await expect(dialog.getByRole("option").first()).toContainText(
+    "Подтверждение обучения",
+  );
+  await expect(
+    dialog.getByRole("option", { name: /Подтверждение обучения · №/ }),
+  ).toHaveCount(1);
+  await field.fill("спрвка об обучении");
+  await expect(dialog.getByRole("option").first()).toContainText(
+    "Справка об обучении",
+  );
+  await field.press("Enter");
+  await expect(page).toHaveURL(/\/services\/enrollment$/);
+});
+
+test("search covers section destinations and respects access to personal results", async ({
+  student,
+  other,
+  request,
+}) => {
+  const cases = [
+    ["мои курсы", "study", "/studies/courses"],
+    ["импорт ics", "calendar", "/calendar/integrations"],
+    ["моя группа", "people", "/people?tab=group"],
+    ["справка об обучении", "all", "/services/enrollment"],
+    ["договор об обучении", "finance", "/finance?tab=contracts"],
+    ["за пределами пар", "events", "/community"],
+    ["звуковой архив", "news", "/community/news/news-0"],
+    ["документы профиля", "account", "/profile?tab=documents"],
+    ["светлая тема", "account", "/settings"],
+    ["как учитывается посещаемость", "account", "/support#faq-attendance"],
+    [
+      "перевод на второй курс",
+      "account",
+      "/profile?tab=history#order-order-student-a",
+    ],
+  ];
+  for (const [q, scope, href] of cases) {
+    const response = await student.get(
+      `/api/search?${new URLSearchParams({ q, scope })}`,
+    );
+    expect(response.status(), q).toBe(200);
+    expect(await response.json(), q).toContainEqual(
+      expect.objectContaining({ href }),
+    );
+  }
+  const personal = `/api/search?${new URLSearchParams({ q: "встреча проектной команды", scope: "calendar" })}`;
+  expect(await (await student.get(personal)).json()).toContainEqual(
+    expect.objectContaining({ type: "Личные события" }),
+  );
+  expect(await (await other.get(personal)).json()).not.toContainEqual(
+    expect.objectContaining({ type: "Личные события" }),
+  );
+  expect((await request.get(personal)).status()).toBe(401);
+});

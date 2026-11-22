@@ -1,0 +1,6 @@
+.requests {
+  padding-block: var(--space-2);
+}
+.pages {
+  margin-block: var(--space-3) var(--space-1);
+}

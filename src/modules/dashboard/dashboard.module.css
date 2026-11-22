@@ -5,6 +5,7 @@
   display: grid;
   grid-template-columns: minmax(0, 704px) minmax(280px, 1fr);
   gap: var(--space-5) var(--space-4);
+  isolation: isolate;
 }
 .dashboard .top {
   display: grid;
@@ -40,11 +41,35 @@
   font-size: var(--text-base);
 }
 .attentionIcon {
-  color: var(--warning-icon);
+  color: var(--warning);
+  flex-shrink: 0;
   margin-top: 2px;
 }
 .dashboard .deadlines {
+  position: relative;
   padding: var(--space-5);
+}
+@media (width > 750px) and (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .deadlines::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset-block-start: var(--space-2);
+    inset-inline-end: var(--space-4);
+    width: 112px;
+    /* Crop out the ground line in the 384px-square GIF. */
+    aspect-ratio: 384 / 260;
+    clip-path: inset(0 0 1px);
+    transform: translateY(-100%);
+    background: url("/brand/deadlines-owl.gif") top center / 100% auto no-repeat;
+    pointer-events: none;
+  }
+  @container (max-width: 920px) {
+    .deadlines::before {
+      inset-block-start: var(--space-3);
+      width: 64px;
+    }
+  }
 }
 .deadlineFlame {
   width: 1.15em;
@@ -151,6 +176,9 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-5);
+}
+.community {
+  padding-block-start: var(--space-2);
 }
 .communityHeading {
   margin-bottom: var(--space-3);

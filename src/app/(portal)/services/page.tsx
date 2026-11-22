@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { FileText } from "lucide-react";
 import { pageStudent } from "@/server/access";
 import { db } from "@/server/db";
 import {
@@ -8,21 +7,18 @@ import {
   Tabs,
   Badge,
   Empty,
-  ActionLink,
   ui,
 } from "@/shared/ui/primitives";
-import { FilterForm, FilterSelect, FilterText } from "@/shared/ui/FilterForm";
 import {
-  containsText,
   filterPage,
   filterValue,
   type FilterParams,
 } from "@/shared/lib/filters";
-import { catalog } from "@/modules/requests/catalog";
+import { ServiceCatalog } from "@/modules/requests/ServiceCatalog";
+import { catalogSearchSelect } from "@/modules/requests/catalog-search";
 import { statusLabel } from "@/shared/config/statuses";
 import { formatDate } from "@/shared/lib/time";
-const path = "/services";
-const categories = [...new Set(catalog.map((service) => service.category))];
+import s from "./services.module.css";
 export default async function ServicesPage({
   searchParams,
 }: {
@@ -30,23 +26,15 @@ export default async function ServicesPage({
 }) {
   const student = await pageStudent();
   const p = await searchParams;
-  const query = filterValue(p.q).trim().slice(0, 80);
-  const category = categories.find(
-    (value) => value === filterValue(p.category),
-  );
   const tab = filterValue(p.tab) === "requests" ? "requests" : "catalog";
   const page = filterPage(p.page);
-  const contains = containsText(query);
   const [services, requests, count] = await Promise.all([
     tab === "requests"
       ? []
       : db.service.findMany({
-          where: {
-            active: true,
-            category,
-            OR: [{ title: contains }, { keywords: contains }],
-          },
+          where: { active: true },
           orderBy: { title: "asc" },
+          select: catalogSearchSelect,
         }),
     tab === "requests"
       ? db.studentRequest.findMany({
@@ -59,6 +47,7 @@ export default async function ServicesPage({
       : [],
     db.studentRequest.count({ where: { studentId: student.id } }),
   ]);
+  const hasNextPage = page < 100 && page * 20 < count;
   return (
     <>
       <PageTitle
@@ -77,7 +66,7 @@ export default async function ServicesPage({
         ]}
       />
       {tab === "requests" ? (
-        <Card>
+        <Card className={s.requests}>
           {requests.map((r) => (
             <Link
               key={r.id}
@@ -114,97 +103,32 @@ export default async function ServicesPage({
               description="Выберите услугу в каталоге — мы подставим учебные сведения."
             />
           )}
-          <div className={ui.row}>
-            {page > 1 && (
-              <Link
-                className={ui.button}
-                href={`/services?tab=requests&page=${page - 1}`}
-              >
-                Назад
-              </Link>
-            )}
-            {page < 100 && page * 20 < count && (
-              <Link
-                className={ui.button}
-                href={`/services?tab=requests&page=${page + 1}`}
-              >
-                Далее
-              </Link>
-            )}
-          </div>
+          {(page > 1 || hasNextPage) && (
+            <nav
+              className={`${ui.row} ${s.pages}`}
+              aria-label="Страницы обращений"
+            >
+              {page > 1 && (
+                <Link
+                  className={ui.button}
+                  href={`/services?tab=requests&page=${page - 1}`}
+                >
+                  Назад
+                </Link>
+              )}
+              {hasNextPage && (
+                <Link
+                  className={ui.button}
+                  href={`/services?tab=requests&page=${page + 1}`}
+                >
+                  Далее
+                </Link>
+              )}
+            </nav>
+          )}
         </Card>
       ) : (
-        <div className={ui.stack}>
-          <FilterForm action={path} className={ui.filterBar}>
-            <FilterText
-              className={ui.searchInput}
-              name="q"
-              value={query}
-              maxLength={80}
-              placeholder="Поиск..."
-              aria-label="Поиск услуг"
-            />
-            <label>
-              Категория
-              <FilterSelect name="category" value={category ?? ""}>
-                <option value="">Все услуги</option>
-                {categories.map((v) => (
-                  <option key={v}>{v}</option>
-                ))}
-              </FilterSelect>
-            </label>
-            <button className={ui.button}>Найти</button>
-          </FilterForm>
-          <div className={ui.grid3}>
-            {services.map((service) => (
-              <Card key={service.slug}>
-                <div className={ui.stack}>
-                  <div className={ui.between}>
-                    <FileText size={21} />
-                    <Badge>{service.category}</Badge>
-                  </div>
-                  <Link href={`/services/${service.slug}`}>
-                    <h2>{service.title}</h2>
-                  </Link>
-                  <p className={ui.muted}>{service.summary}</p>
-                  <div className={ui.between}>
-                    <small className={ui.caption}>
-                      Около {service.workDays} рабочих дней
-                    </small>
-                    <Link
-                      className={ui.link}
-                      href={`/services/${service.slug}`}
-                    >
-                      Открыть →
-                    </Link>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-          {!services.length && (
-            <Empty
-              title="Услуги не найдены"
-              description="Попробуйте другое назначение документа."
-              action={
-                query || category ? (
-                  <ActionLink href={path}>Сбросить фильтры</ActionLink>
-                ) : undefined
-              }
-            />
-          )}
-          <Card>
-            <h3>Специализированные документы</h3>
-            <p className={ui.muted}>
-              Воинский учёт и документы для иностранных студентов оформляются
-              через учебный офис. Личные чувствительные сведения здесь не
-              собираются.
-            </p>
-            <Link className={ui.link} href="/people?tab=departments&q=Учебный">
-              Как получить →
-            </Link>
-          </Card>
-        </div>
+        <ServiceCatalog services={services} />
       )}
     </>
   );

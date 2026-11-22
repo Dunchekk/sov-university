@@ -92,7 +92,11 @@ export async function saveEvent(
   id: string,
   input: z.infer<typeof saveEventSchema>,
 ) {
-  await communityEvent(student, id);
+  const event = await db.communityEvent.findFirst({
+    where: { id, ...communityAudience(student.groupId) },
+    select: { id: true },
+  });
+  if (!event) throw notFound();
   return db.savedEvent.upsert({
     where: { studentId_eventId: { studentId: student.id, eventId: id } },
     create: { studentId: student.id, eventId: id, saved: false, ...input },

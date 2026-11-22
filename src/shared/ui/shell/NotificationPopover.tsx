@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Bell,
@@ -11,6 +11,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { api } from "@/shared/lib/client";
+import { NotificationLink } from "@/modules/community/NotificationLink";
 import { formatDate } from "@/shared/lib/time";
 import { ui } from "../primitives";
 import s from "./shell.module.css";
@@ -40,23 +41,45 @@ export function NotificationPopover({ unread }: { unread: number }) {
   const [fadeEnd, setFadeEnd] = useState(false);
   const anchor = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const previousHeight = useRef<number | undefined>(undefined);
   const listRef = useRef<HTMLUListElement>(null);
   const panelId = useId();
+
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    const from = previousHeight.current;
+    previousHeight.current = undefined;
+    if (
+      !panel ||
+      from === undefined ||
+      matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
+      return;
+
+    const to = panel.getBoundingClientRect().height;
+    if (from === to) return;
+
+    const animation = panel.animate(
+      [{ height: `${from}px` }, { height: `${to}px` }],
+      { duration: 280, easing: "ease-in-out" },
+    );
+    return () => animation.cancel();
+  }, [items, open]);
 
   useEffect(() => {
     if (!open) return;
     const controller = new AbortController();
 
+    function showItems(next: Notification[] | "error") {
+      if (controller.signal.aborted) return;
+      previousHeight.current = panelRef.current?.getBoundingClientRect().height;
+      setItems(next);
+    }
+
     api<Notification[]>("/api/notifications", {
       signal: controller.signal,
-    }).then(
-      (notifications) => {
-        if (!controller.signal.aborted) setItems(notifications);
-      },
-      () => {
-        if (!controller.signal.aborted) setItems("error");
-      },
-    );
+    }).then(showItems, () => showItems("error"));
 
     function closeOutside(event: PointerEvent) {
       if (
@@ -70,7 +93,7 @@ export function NotificationPopover({ unread }: { unread: number }) {
       document.removeEventListener("pointerdown", closeOutside);
       controller.abort();
     };
-  }, [open]);
+  }, [open, unread]);
 
   useEffect(() => {
     const list = listRef.current;
@@ -135,6 +158,7 @@ export function NotificationPopover({ unread }: { unread: number }) {
       </button>
       {open && (
         <section
+          ref={panelRef}
           id={panelId}
           className={s.notificationPanel}
           aria-labelledby={`${panelId}-title`}
@@ -163,11 +187,11 @@ export function NotificationPopover({ unread }: { unread: number }) {
                   const Icon = icons[item.category] ?? Bell;
                   return (
                     <li key={item.id}>
-                      <Link
+                      <NotificationLink
                         className={s.notificationItem}
-                        data-unread={!item.readAt ? "" : undefined}
                         href={item.href}
-                        onNavigate={close}
+                        unreadId={item.readAt ? undefined : item.id}
+                        onOpen={close}
                       >
                         <span className={s.notificationIcon}>
                           <Icon size={17} aria-hidden="true" />
@@ -195,7 +219,7 @@ export function NotificationPopover({ unread }: { unread: number }) {
                             <span className={ui.srOnly}>Непрочитанное</span>
                           </>
                         )}
-                      </Link>
+                      </NotificationLink>
                     </li>
                   );
                 })}

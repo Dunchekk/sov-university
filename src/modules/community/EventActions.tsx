@@ -1,31 +1,54 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Bookmark, CalendarPlus, Check } from "lucide-react";
 import { Button, ui } from "@/shared/ui/primitives";
 import { api } from "@/shared/lib/client";
+import s from "./community.module.css";
+
+type Selection = { saved: boolean; inCalendar: boolean };
+
+function ActionLabel({
+  active,
+  on,
+  off,
+}: {
+  active: boolean;
+  on: string;
+  off: string;
+}) {
+  return (
+    <span className={s.actionLabel}>
+      <span aria-hidden={active}>{off}</span>
+      <span aria-hidden={!active}>{on}</span>
+    </span>
+  );
+}
+
 export function EventActions({
   id,
-  saved,
-  inCalendar,
+  initialSelection,
 }: {
   id: string;
-  saved: boolean;
-  inCalendar: boolean;
+  initialSelection: Selection;
 }) {
-  const router = useRouter();
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
-  const update = async (data: Record<string, boolean>) => {
+  const [selection, setSelection] = useState(initialSelection);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const { saved, inCalendar } = selection;
+
+  const update = async (data: Partial<Selection>) => {
+    if (busy) return;
+    setError("");
     setBusy(true);
+    setSelection({ ...selection, ...data });
     try {
-      await api(`/api/community/${id}`, {
+      const updated = await api<Selection>(`/api/community/${id}`, {
         method: "PATCH",
         body: JSON.stringify(data),
       });
-      setError("");
-      router.refresh();
+      setSelection(updated);
     } catch (e) {
+      setSelection(selection);
       setError(e instanceof Error ? e.message : "Не удалось сохранить.");
     } finally {
       setBusy(false);
@@ -34,19 +57,39 @@ export function EventActions({
   return (
     <div className={ui.stack}>
       <div className={ui.row}>
-        <Button disabled={busy} onClick={() => update({ saved: !saved })}>
-          <Bookmark size={16} />
-          {saved ? "Убрать из сохранённых" : "Сохранить событие"}
+        <Button
+          aria-disabled={busy}
+          className={s.actionButton}
+          aria-pressed={saved}
+          onClick={() => update({ saved: !saved })}
+        >
+          <Bookmark
+            size={16}
+            fill={saved ? "currentColor" : "none"}
+            aria-hidden
+          />
+          <ActionLabel
+            active={saved}
+            on="Убрать из сохранённых"
+            off="Сохранить событие"
+          />
         </Button>
         <Button
-          disabled={busy}
+          aria-disabled={busy}
+          className={s.actionButton}
           variant={inCalendar ? "default" : "primary"}
           onClick={() => update({ inCalendar: !inCalendar })}
         >
-          {inCalendar ? <Check size={16} /> : <CalendarPlus size={16} />}{" "}
-          {inCalendar
-            ? "В моём календаре · убрать"
-            : "Добавить в мой календарь"}
+          {inCalendar ? (
+            <Check size={16} aria-hidden />
+          ) : (
+            <CalendarPlus size={16} aria-hidden />
+          )}
+          <ActionLabel
+            active={inCalendar}
+            on="В моём календаре · убрать"
+            off="Добавить в мой календарь"
+          />
         </Button>
       </div>
       <p className={ui.caption}>

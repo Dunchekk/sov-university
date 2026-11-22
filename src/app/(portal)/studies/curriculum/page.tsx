@@ -10,6 +10,7 @@ import {
   ui,
 } from "@/shared/ui/primitives";
 import { filterValue, type FilterParams } from "@/shared/lib/filters";
+import s from "./curriculum.module.css";
 export default async function CurriculumPage({
   searchParams,
 }: {
@@ -48,9 +49,13 @@ export default async function CurriculumPage({
     <>
       <PageTitle
         title="Учебный план"
+        breadcrumb={{
+          path: "/studies/curriculum",
+          label: `${semester} семестр`,
+        }}
         description={`${student.group.program.name} · бакалавриат`}
       />
-      <Card>
+      <Card className={s.progressCard}>
         <div className={ui.between}>
           <div>
             <span className={ui.eyebrow}>
@@ -85,75 +90,81 @@ export default async function CurriculumPage({
           href: `/studies/curriculum?semester=${i + 1}`,
         }))}
       />
-      {semesterItems.length ? (
-        <Card>
-          <div className={ui.tableWrap}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Дисциплина / работа</th>
-                  <th>Часть программы</th>
-                  <th>Кредиты / часы</th>
-                  <th>Контроль</th>
-                  <th>Прогресс</th>
-                </tr>
-              </thead>
-              <tbody>
-                {semesterItems.map((i) => (
-                  <tr key={i.id}>
-                    <td>
-                      {i.courseId &&
-                      enrollments.some((e) => e.courseId === i.courseId) ? (
+      <Card>
+        <div className={ui.tableWrap}>
+          <table className={s.table}>
+            <colgroup>
+              <col className={s.disciplineColumn} />
+              <col className={s.categoryColumn} />
+              <col className={s.creditsColumn} />
+              <col className={s.assessmentColumn} />
+              <col className={s.progressColumn} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col">Дисциплина / работа</th>
+                <th scope="col">Часть программы</th>
+                <th scope="col">Кредиты / часы</th>
+                <th scope="col">Контроль</th>
+                <th scope="col">Прогресс</th>
+              </tr>
+            </thead>
+            <tbody>
+              {semesterItems.map((i) => (
+                <tr key={i.id} id={`curriculum-${i.id}`}>
+                  <td>
+                    {i.courseId &&
+                    enrollments.some((e) => e.courseId === i.courseId) ? (
+                      <Link
+                        className={ui.link}
+                        href={`/studies/courses/${i.courseId}`}
+                      >
+                        {i.title}
+                      </Link>
+                    ) : (
+                      <details>
+                        <summary>{i.title}</summary>
+                        <p className={ui.caption}>{i.description}</p>
                         <Link
                           className={ui.link}
-                          href={`/studies/courses/${i.courseId}`}
+                          href="/people?tab=departments"
                         >
-                          {i.title}
+                          Ответственное подразделение
                         </Link>
-                      ) : (
-                        <details>
-                          <summary>{i.title}</summary>
-                          <p className={ui.caption}>{i.description}</p>
-                          <Link
-                            className={ui.link}
-                            href="/people?tab=departments"
-                          >
-                            Ответственное подразделение
-                          </Link>
-                        </details>
-                      )}
-                    </td>
-                    <td>{i.category}</td>
-                    <td>
-                      {i.credits} / {i.hours}
-                    </td>
-                    <td>{i.assessmentType}</td>
-                    <td>
-                      <Badge
-                        tone={
-                          i.courseId && done.has(i.courseId)
-                            ? "success"
-                            : "default"
-                        }
-                      >
-                        {i.courseId && done.has(i.courseId)
-                          ? "Освоено"
-                          : semester === student.currentSemester
-                            ? "В процессе"
-                            : semester > student.currentSemester
-                              ? "Впереди"
-                              : "Нет опубликованного результата"}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      ) : (
-        <Empty title="На этот семестр пока нет дисциплин" />
-      )}
+                      </details>
+                    )}
+                  </td>
+                  <td>{i.category}</td>
+                  <td>
+                    {i.credits} / {i.hours}
+                  </td>
+                  <td>{i.assessmentType}</td>
+                  <td>
+                    <Badge
+                      tone={
+                        i.courseId && done.has(i.courseId)
+                          ? "success"
+                          : "default"
+                      }
+                    >
+                      {i.courseId && done.has(i.courseId)
+                        ? "Освоено"
+                        : semester === student.currentSemester
+                          ? "В процессе"
+                          : semester > student.currentSemester
+                            ? "Впереди"
+                            : "Нет опубликованного результата"}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {semesterItems.length === 0 && (
+          <Empty title="На этот семестр пока нет дисциплин" />
+        )}
+      </Card>
     </>
   );
 }

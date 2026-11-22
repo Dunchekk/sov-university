@@ -21,7 +21,9 @@ import {
   type FilterParams,
 } from "@/shared/lib/filters";
 import { ReadNotification } from "@/modules/community/ReadNotification";
+import { NotificationLink } from "@/modules/community/NotificationLink";
 import { formatDate } from "@/shared/lib/time";
+import s from "./notifications.module.css";
 const path = "/notifications";
 const categories = [
   ["SCHEDULE", "Расписание"],
@@ -90,11 +92,14 @@ export default async function NotificationsPage({
       <Card>
         {items.map((n) => (
           <div key={n.id} className={`${ui.between} ${ui.listItem}`}>
-            <div>
+            <NotificationLink
+              className={s.notification}
+              href={n.href}
+              unreadId={n.readAt ? undefined : n.id}
+              aria-labelledby={`notification-${n.id}`}
+            >
               <div className={ui.row}>
-                <Link href={n.href}>
-                  <h3>{n.title}</h3>
-                </Link>
+                <h3 id={`notification-${n.id}`}>{n.title}</h3>
                 {!n.readAt && <Badge tone="info">Новое</Badge>}
               </div>
               <p className={ui.muted}>{n.body}</p>
@@ -106,13 +111,8 @@ export default async function NotificationsPage({
                   minute: "2-digit",
                 })}
               </small>
-            </div>
-            <div className={ui.row}>
-              <Link className={ui.link} href={n.href}>
-                Открыть →
-              </Link>
-              {!n.readAt && <ReadNotification id={n.id} />}
-            </div>
+            </NotificationLink>
+            {!n.readAt && <ReadNotification id={n.id} />}
           </div>
         ))}
         {!items.length && (

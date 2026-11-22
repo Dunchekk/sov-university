@@ -20,8 +20,11 @@ test("rating opens the current year and reconciles the course rows with the scor
   await expect(
     courses.getByRole("link", { name: "Проверка источников" }),
   ).toBeVisible();
+  await expect(
+    courses.getByRole("link", { name: "Информационная типографика" }),
+  ).toBeVisible();
   const calculations = await courses.locator("tbody td").allTextContents();
-  expect(calculations.length).toBeGreaterThanOrEqual(3);
+  expect(calculations.length).toBeGreaterThanOrEqual(7);
   const sum = calculations.reduce((total, expression) => {
     const [credits, grade, contribution] = expression
       .match(/\d+/g)!
@@ -33,6 +36,11 @@ test("rating opens the current year and reconciles the course rows with the scor
   await expect(
     page.getByRole("heading", { name: "Как считается рейтинг" }),
   ).toBeVisible();
+  const engineeringCurrent = await other.get("/studies/rating");
+  expect(engineeringCurrent.ok()).toBe(true);
+  const engineeringCurrentPage = await engineeringCurrent.text();
+  expect(engineeringCurrentPage).toContain("Функциональное программирование");
+  expect(engineeringCurrentPage).not.toContain("Информационная типографика");
 
   await previous.click();
   await expect(page).toHaveURL(new RegExp(`year=${year - 1}`));

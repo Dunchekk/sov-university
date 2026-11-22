@@ -31,15 +31,14 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
-  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
-  background: var(--bg-surface);
+  background: var(--bg-subtle);
   color: var(--text-primary);
   overflow-wrap: anywhere;
 }
 
 .file:hover {
-  border-color: var(--border-control);
+  background: var(--bg-hover);
   color: var(--text-primary);
 }
 

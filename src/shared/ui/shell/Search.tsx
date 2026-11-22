@@ -3,6 +3,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search as SearchIcon } from "lucide-react";
+import { openNotification } from "@/modules/community/NotificationLink";
 import {
   searchScopes,
   type SearchResult,
@@ -97,7 +98,11 @@ export function Search() {
 
   const go = (item: SearchResult) => {
     setOpen(false);
-    router.push(item.href);
+    if (item.unreadNotificationId) {
+      void openNotification(router, item.href, item.unreadNotificationId);
+    } else {
+      router.push(item.href);
+    }
   };
   const optionId = (index: number) => `${resultsId}-${index}`;
 
@@ -211,7 +216,11 @@ export function Search() {
                   onClick={() => go(item)}
                 >
                   <span>{item.title}</span>
-                  <small>{item.type}</small>
+                  <small>
+                    {item.description
+                      ? `${item.type} · ${item.description}`
+                      : item.type}
+                  </small>
                 </div>
               ))}
             </div>

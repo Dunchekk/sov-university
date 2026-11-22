@@ -47,7 +47,11 @@ export default async function ServicePage({
       };
   return (
     <>
-      <PageTitle title={service.title} description={service.summary} />
+      <PageTitle
+        title={service.title}
+        description={service.summary}
+        breadcrumb={{ path: `/services/${encodeURIComponent(slug)}` }}
+      />
       <div className={ui.grid2}>
         <Card>
           <RequestForm

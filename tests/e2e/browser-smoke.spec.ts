@@ -9,6 +9,16 @@ test("header notifications open by the bell, scroll inside the panel and link to
   const response = await student.get("/api/notifications");
   expect(response.ok()).toBe(true);
   const [latest] = await response.json();
+  const { promise, resolve: release } = Promise.withResolvers<void>();
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.route(
+    "**/api/notifications",
+    async (route) => {
+      await promise;
+      await route.continue();
+    },
+    { times: 1 },
+  );
   await page.goto("/");
   const header = page.getByRole("banner");
   const bell = header.getByRole("button", { name: /^Уведомления/ });
@@ -16,9 +26,44 @@ test("header notifications open by the bell, scroll inside the panel and link to
   const panel = header.getByRole("region", { name: "Уведомления" });
   await expect(header).toHaveCSS("background-image", "none");
   await expect(header).toHaveCSS("border-bottom-width", "1px");
+  await expect(search).toHaveCSS("border-top-width", "0px");
+  await expect(bell).toHaveCSS("border-top-width", "0px");
   await bell.click();
   await expect(page).toHaveURL(origin + "/");
   await expect(bell).toHaveAttribute("aria-expanded", "true");
+  await expect(panel.getByRole("status")).toHaveText("Загружаем уведомления…");
+  await panel.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished)),
+  );
+
+  const loadingHeight = (await panel.boundingBox())!.height;
+  const measurement = await panel.evaluateHandle((element) => ({
+    heights: new Promise<number[]>((resolve) => {
+      const observer = new MutationObserver(() => {
+        if (!element.querySelector("ul")) return;
+        observer.disconnect();
+        const heights: number[] = [];
+        function sample() {
+          heights.push(element.getBoundingClientRect().height);
+          if (element.getAnimations().some((a) => a.playState === "running"))
+            requestAnimationFrame(sample);
+          else resolve(heights);
+        }
+        sample();
+      });
+      observer.observe(element, { childList: true });
+    }),
+  }));
+  release();
+  const heights = await measurement.evaluate(({ heights }) => heights);
+  const loadedHeight = heights.at(-1)!;
+  expect(loadedHeight).toBeGreaterThan(loadingHeight + 50);
+  expect(
+    heights.some(
+      (height) => height > loadingHeight + 1 && height < loadedHeight - 1,
+    ),
+  ).toBe(true);
+
   const item = panel
     .getByRole("list", { name: "Последние уведомления" })
     .getByRole("link")
@@ -112,6 +157,13 @@ test("home-to-calendar, roster search, curriculum, finance prefill and mobile di
   page.on("pageerror", (error) => errors.push(error.message));
   const day = addDays(dateKey(), 2);
   await page.goto("/");
+  const main = page.getByRole("main");
+  await expect(
+    main.getByRole("link", { name: /Следующая стипендия/ }),
+  ).toBeVisible();
+  await expect(
+    main.getByRole("button", { name: "Выразительная кнопка" }),
+  ).toHaveCount(0);
   await page
     .locator(`a[href="/calendar?date=${day}&view=day"]`)
     .first()
@@ -147,14 +199,39 @@ test("home-to-calendar, roster search, curriculum, finance prefill and mobile di
   const progress = page.getByRole("progressbar", { name: "Освоенные кредиты" });
   const credits = await progress.getAttribute("value");
   expect(Number(credits)).toBeGreaterThan(0);
-  await page.getByRole("link", { name: "2 семестр", exact: true }).click();
+  const firstSemester = page.getByRole("link", {
+    name: "1 семестр",
+    exact: true,
+  });
+  await firstSemester.click();
+  await expect(firstSemester).toHaveAttribute("aria-current", "page");
+  const columnLayout = () =>
+    page.getByRole("columnheader").evaluateAll((headers) =>
+      headers.map((header) => {
+        const { x, width } = header.getBoundingClientRect();
+        return { x, width };
+      }),
+    );
+  const firstLayout = await columnLayout();
+  expect(firstLayout).toHaveLength(5);
+  const secondSemester = page.getByRole("link", {
+    name: "2 семестр",
+    exact: true,
+  });
+  await secondSemester.click();
   await expect(page).toHaveURL(/semester=2/);
+  await expect(secondSemester).toHaveAttribute("aria-current", "page");
+  expect(await columnLayout()).toEqual(firstLayout);
   await expect(progress).toHaveAttribute("value", credits!);
   const contextB = await browser.newContext({
     baseURL: origin,
     storageState: bState,
   });
   const b = await contextB.newPage();
+  await b.goto("/");
+  await expect(
+    b.getByRole("main").getByRole("link", { name: /стипендия/i }),
+  ).toHaveCount(0);
   await b.goto("/finance?tab=contracts");
   await b
     .getByRole("link", { name: "Заказать справку об оплате" })
@@ -187,6 +264,40 @@ test("home-to-calendar, roster search, curriculum, finance prefill and mobile di
     ),
   ).toBe(true);
   expect(errors).toEqual([]);
+});
+
+test("feedback opens from the sidebar on desktop and mobile routes", async ({
+  studentPage: page,
+}) => {
+  await page.goto("/profile");
+  const menu = page.getByRole("complementary", { name: "Основная навигация" });
+  const feedback = menu.getByRole("button", { name: "Выразительная кнопка" });
+  const dialog = page.getByRole("dialog", { name: "Выразительная кнопка" });
+  await expect(feedback).toHaveCSS("border-top-width", "0px");
+  await expect(feedback).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+
+  await page.route("**/api/me/preferences", (route) =>
+    route.fulfill({ json: {} }),
+  );
+  await menu
+    .getByRole("button", { name: "Свернуть меню", exact: true })
+    .click();
+  await expect(feedback.getByText("Выразительная кнопка")).toBeHidden();
+  await feedback.press("Enter");
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(feedback).toBeFocused();
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.getByRole("button", { name: "Открыть меню" }).click();
+  await expect(feedback.getByText("Выразительная кнопка")).toBeVisible();
+  await feedback.click();
+  await expect(dialog).toBeInViewport();
+  await dialog.getByRole("link", { name: /Предложить улучшение/ }).click();
+  await expect(page.getByLabel("Тема")).toHaveValue("Предложение по улучшению");
+  await expect(dialog).toBeHidden();
+  await expect(menu).toBeHidden();
 });
 
 test("dialogs ignore drags and fade out without shrinking on every close path", async ({
@@ -304,9 +415,10 @@ test("dialogs ignore drags and fade out without shrinking on every close path", 
   await expect(dialog).toBeVisible();
   await expect(dialog.locator("h2 + p")).toHaveText(lesson.description);
   await expect(dialog.getByText(/^Скачается файл события/)).toHaveCount(0);
+  await expect(dialog.getByText("Добавить в свой календарь")).toHaveCount(0);
   await expect(
-    dialog.getByRole("link", { name: "Добавить в свой календарь" }),
-  ).toHaveAttribute("href", /\/api\/calendar\/export\.ics\?/);
+    dialog.getByRole("link", { name: "Открыть дисциплину" }),
+  ).toHaveAttribute("href", lesson.href);
   await expectSmoothClose(() => page.goBack());
   // Cancelling while Save has focus must not submit during the fading frames.
   let submitted = false;

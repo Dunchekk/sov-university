@@ -17,6 +17,7 @@ export default async function AchievementPage({
     <>
       <PageTitle
         title={item.title}
+        breadcrumb={{ path: `/studies/achievements/${encodeURIComponent(id)}` }}
         description={`${item.category} · ${item.date}`}
         action={
           <Badge tone={item.status === "CONFIRMED" ? "success" : "default"}>

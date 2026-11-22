@@ -1,0 +1,27 @@
+.resultActions {
+  margin-block-start: var(--space-5);
+  border-block-start: 1px solid var(--border-subtle);
+}
+.files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-end: 1px solid var(--border-subtle);
+}
+.file {
+  padding-block: var(--space-4);
+}
+.file + .file {
+  border-block-start: 1px solid var(--border-subtle);
+}
+.fileLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: grid;
+  gap: var(--space-3);
+  padding-block-start: var(--space-4);
+}

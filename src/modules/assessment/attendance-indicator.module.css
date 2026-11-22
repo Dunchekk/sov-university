@@ -6,6 +6,9 @@ button.indicator {
 
 button.penalty,
 button.penalty:hover:not(:disabled) {
-  border-color: var(--warning);
+  background: var(--warning-soft);
   color: var(--warning);
+}
+button.penalty:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--warning-soft) 88%, var(--warning));
 }

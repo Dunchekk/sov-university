@@ -1,6 +1,36 @@
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { readFile } from "node:fs/promises";
+import { brand } from "../src/shared/config/brand";
+import { formatDate, money } from "../src/shared/lib/time";
+import type { Contract, PaymentSchedule } from "../src/generated/prisma/client";
+
+export function tuitionContractDocument(
+  contract: Pick<Contract, "number" | "title" | "payer" | "totalKopecks">,
+  payments: Pick<PaymentSchedule, "dueAt" | "amountKopecks">[],
+) {
+  return {
+    title: `Договор об образовании с ${brand.name}`,
+    lines: [
+      `Договор № ${contract.number}`,
+      `Университет: ${brand.university} (${brand.name}).`,
+      `Плательщик: ${contract.payer}.`,
+      `Предмет договора: ${contract.title}.`,
+      `Стоимость учебного года: ${money(contract.totalKopecks)}.`,
+      "График платежей",
+      ...payments.map(({ dueAt, amountKopecks }) => {
+        const due = formatDate(dueAt, {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        return `${due} - ${money(amountKopecks)}`;
+      }),
+      "Демонстрационный договор не создаёт обязательств и не содержит платёжных реквизитов.",
+    ],
+  };
+}
+
 export async function demoPdf(title: string, lines: string[]) {
   const document = await PDFDocument.create();
   document.registerFontkit(fontkit);
@@ -9,7 +39,7 @@ export async function demoPdf(title: string, lines: string[]) {
     { subset: false },
   );
   const page = document.addPage([595, 842]);
-  page.drawText("РЯДОМ / УНИВЕРСИТЕТ СЕВЕРНЫЙ", {
+  page.drawText(`${brand.name} / ${brand.university.toUpperCase()}`, {
     x: 48,
     y: 780,
     size: 11,
@@ -70,6 +100,6 @@ export async function demoPdf(title: string, lines: string[]) {
     color: rgb(0.35, 0.36, 0.4),
   });
   document.setTitle(title);
-  document.setAuthor("Рядом — учебный прототип");
+  document.setAuthor(`${brand.name} — учебный прототип`);
   return Buffer.from(await document.save());
 }

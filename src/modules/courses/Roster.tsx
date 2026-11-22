@@ -40,26 +40,25 @@ export function Roster({
   );
   const [response, setResponse] = useState<{ query: string; data: Data }>();
   const [failedQuery, setFailedQuery] = useState("");
-  const { role, group, q, page } = filters;
+  const { group, q, page } = filters;
   const query = rosterQuery({ ...filters, q: q.trim() });
   if (appliedSearch !== search) {
     const next = rosterFilters(Object.fromEntries(params));
     setAppliedSearch(search);
-    if (rosterQuery(next) !== query || next.role !== role) setFilters(next);
+    if (rosterQuery(next) !== query) setFilters(next);
   }
   const initialQuery = rosterQuery(initialFilters);
-  const showStudents = role !== "teacher";
-  const showTeacher =
-    role !== "student" &&
-    teacher.name.toLowerCase().includes(q.trim().toLowerCase());
+  const showTeacher = teacher.name
+    .toLowerCase()
+    .includes(q.trim().toLowerCase());
   const data =
     query === initialQuery
       ? initial
       : response?.query === query
         ? response.data
         : null;
-  const failed = showStudents && failedQuery === query;
-  const pending = showStudents && !data && !failed;
+  const failed = failedQuery === query;
+  const pending = !data && !failed;
   const showGroup = initial.groups.length > 1 || !!group;
 
   function change(values: Partial<RosterFilters>, replace = false) {
@@ -68,7 +67,6 @@ export function Roster({
     const href = filterHref(path, {
       tab: "people",
       q: next.q.trim(),
-      role: next.role,
       group: next.group,
       page: next.page > 1 ? next.page : undefined,
     });
@@ -77,7 +75,7 @@ export function Roster({
   }
 
   useEffect(() => {
-    if (!showStudents || query === initialQuery) return;
+    if (query === initialQuery) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
@@ -97,11 +95,11 @@ export function Roster({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [courseId, initialQuery, query, showStudents]);
+  }, [courseId, initialQuery, query]);
 
   return (
     <div className={ui.stack}>
-      <div className={showGroup ? ui.grid3 : ui.grid2}>
+      <div className={showGroup ? ui.grid2 : undefined}>
         <input
           className={ui.searchInput}
           disabled={!ready}
@@ -111,23 +109,11 @@ export function Roster({
           placeholder="Поиск..."
           aria-label="Найти участника"
         />
-        <label>
-          Роль
-          <select
-            disabled={!ready}
-            value={role}
-            onChange={(event) => change({ role: event.target.value, page: 1 })}
-          >
-            <option value="">Все участники</option>
-            <option value="teacher">Преподаватель</option>
-            <option value="student">Студенты</option>
-          </select>
-        </label>
         {showGroup && (
           <label>
             Группа студентов
             <select
-              disabled={!ready || !showStudents}
+              disabled={!ready}
               value={group}
               onChange={(event) =>
                 change({ group: event.target.value, page: 1 })
@@ -159,7 +145,7 @@ export function Roster({
             </div>
           </div>
         )}
-        {showStudents && data && (
+        {data && (
           <>
             <div className={ui.grid2}>
               {data.items.map((person) => (
@@ -193,12 +179,9 @@ export function Roster({
             )}
           </>
         )}
-        {!showTeacher &&
-          !pending &&
-          !failed &&
-          (!showStudents || !data?.items.length) && (
-            <Empty title="Участники не найдены" />
-          )}
+        {!showTeacher && data?.items.length === 0 && (
+          <Empty title="Участники не найдены" />
+        )}
         {pending && (
           <p role="status" className={ui.caption}>
             Загрузка участников…

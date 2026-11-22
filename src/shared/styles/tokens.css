@@ -86,9 +86,8 @@
   --danger-soft: light-dark(#ffe7ee, #36171d);
   --success: light-dark(#0c6b4b, #79d9a2);
   --success-soft: light-dark(#def7ed, #173022);
-  --warning: light-dark(#735900, #e7bc64);
-  --warning-soft: light-dark(#fff3af, #332812);
-  --warning-icon: light-dark(#a47e00, var(--warning));
+  --warning: light-dark(#a34516, #e7bc64);
+  --warning-soft: light-dark(#fff0e5, #332812);
   --focus-ring: light-dark(var(--accent), #a3c1ff);
   --primary-bg: light-dark(var(--gray-850), var(--gray-900));
   --primary-fg: light-dark(var(--gray-0), var(--gray-75));

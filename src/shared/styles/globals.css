@@ -123,6 +123,10 @@ svg {
 img {
   max-width: 100%;
 }
+/* Keep browser image overlays off decorative images and let their links receive clicks. */
+img[alt=""] {
+  pointer-events: none;
+}
 input,
 textarea,
 select {

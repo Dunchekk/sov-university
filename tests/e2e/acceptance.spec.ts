@@ -152,17 +152,62 @@ test("private profile loads on demand, community state and notification reads pe
   const response = await page.goto("/profile");
   expect(await response!.text()).not.toContain("DEMO-000001");
   expect(privateReads).toBe(0);
+  const profile = page.getByRole("main");
+  await expect(
+    profile.getByRole("heading", { name: "Александра Миронова", level: 1 }),
+  ).toBeVisible();
+  await expect(profile.locator('a[href^="/calendar"]')).toHaveCount(0);
+  const enrollment = profile.getByRole("link", { name: "Справка об обучении" });
+  await expect(enrollment).toHaveAttribute("href", "/services/enrollment");
+  await expect(enrollment).toHaveCSS("border-top-width", "0px");
+  await expect(profile.getByRole("region", { name: "Обучение" })).toHaveCSS(
+    "border-top-width",
+    "0px",
+  );
   expect(await page.locator("body").textContent()).not.toContain(
     "student-a@personal.example.org",
   );
-  await page
-    .getByRole("button", { name: "Показать", exact: true })
-    .first()
-    .click();
+  await profile.getByRole("button", { name: "Показать личный email" }).click();
   await expect(
     page.getByText("student-a@personal.example.org", { exact: true }),
   ).toBeVisible();
   expect(privateReads).toBe(1);
+  await expect(profile.getByText("DEMO-000001", { exact: true })).toHaveCount(
+    0,
+  );
+  await profile.getByRole("button", { name: "Скрыть личный email" }).click();
+  await expect(
+    profile.getByText("student-a@personal.example.org", { exact: true }),
+  ).toHaveCount(0);
+  await profile.getByRole("link", { name: "Документы", exact: true }).click();
+  await expect(page).toHaveURL(/\/profile\?tab=documents$/);
+  await expect(profile.locator('a[href="/api/files/result-3"]')).toBeVisible();
+  await expect(
+    profile.locator('a[href="/api/files/contract-file"]'),
+  ).toHaveCount(0);
+  expect(privateReads).toBe(1);
+  await profile
+    .getByRole("button", { name: "Показать документы и адрес" })
+    .click();
+  await expect(profile.getByText("DEMO-000001", { exact: true })).toBeVisible();
+  expect(privateReads).toBe(2);
+  await profile
+    .getByRole("button", { name: "Скрыть документы и адрес" })
+    .click();
+  await expect(profile.getByText("DEMO-000001", { exact: true })).toHaveCount(
+    0,
+  );
+  const documentsB = await other.get("/profile?tab=documents");
+  expect(documentsB.status()).toBe(200);
+  const documentsHtml = await documentsB.text();
+  expect(documentsHtml).toContain('href="/api/files/contract-file"');
+  expect(documentsHtml).toContain('href="/api/files/result-8"');
+  expect(documentsHtml).not.toContain("/api/files/result-3");
+  expect(documentsHtml).not.toContain("DEMO-000002");
+  const contract = await other.get("/api/files/contract-file");
+  expect(contract.status()).toBe(200);
+  expect((await contract.body()).subarray(0, 5).toString()).toBe("%PDF-");
+  expect((await student.get("/api/files/contract-file")).status()).toBe(404);
   const privateB = await (
     await other.get("/api/me/private-details?studentId=student-a")
   ).json();
@@ -253,6 +298,8 @@ test("request clarification author is enforced and expired PDF cannot be downloa
     });
     expect((await student.get(`/api/files/${file.id}`)).status()).toBe(410);
     expect((await other.get(`/api/files/${file.id}`)).status()).toBe(404);
+    const profile = await student.get("/profile?tab=documents");
+    expect(await profile.text()).not.toContain(`/api/files/${file.id}`);
   } finally {
     await db.studentRequest.update({
       where: { id: source.id },
@@ -297,11 +344,8 @@ test("attendance explanation supports keyboard and returns focus; course and res
   await page.goto("/studies/courses?q=Проектирование");
   await expect(button).toHaveText("");
   await expect(button.locator("svg")).toBeVisible();
-  const warningColor = await button.evaluate((element) => {
-    const style = getComputedStyle(element);
-    return { icon: style.color, border: style.borderTopColor };
-  });
-  expect(warningColor.icon).toBe(warningColor.border);
+  await expect(button).toHaveCSS("border-top-width", "0px");
+  await expect(button).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await button.click();
   await expect(dialog).toContainText("При посещаемости ниже 80%");
 });
@@ -330,6 +374,50 @@ test("assessment guidance opens only from the question button and closes with Es
   await page.getByRole("heading", { name: "Как получить результат" }).click();
   await expect(help).toHaveAttribute("aria-expanded", "false");
   await expect(guidance).toBeHidden();
+});
+
+test("home omits the academic card and finance links have room to wrap", async ({
+  studentPage: page,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: "theme", value: "light", url: origin }]);
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Мои академические данные" }),
+  ).toHaveCount(0);
+  const attention = page.getByRole("region", { name: "Требует внимания" });
+  await expect(attention.locator("svg").first()).toHaveCSS(
+    "color",
+    "rgb(163, 69, 22)",
+  );
+  await expect(
+    page.getByRole("heading", { name: "За пределами пар" }),
+  ).toBeVisible();
+  await page.goto("/profile");
+  await expect(page.getByRole("region", { name: "Обучение" })).toBeVisible();
+
+  await page.goto("/finance");
+  const heading = page.getByRole("heading", { name: "Финансовые документы" });
+  const card = heading.locator("..");
+  const first = card.getByRole("link", { name: "Сведения о выплатах" });
+  const last = card.getByRole("link", { name: "Стипендиальные кампании" });
+  const caption = card.getByText(/^Справочные демонстрационные данные/);
+  for (const width of [1440, 360]) {
+    await page.setViewportSize({ width, height: 900 });
+    const [titleBox, firstBox, lastBox, captionBox] = await Promise.all([
+      heading.boundingBox(),
+      first.boundingBox(),
+      last.boundingBox(),
+      caption.boundingBox(),
+    ]);
+    expect(
+      firstBox!.y - (titleBox!.y + titleBox!.height),
+    ).toBeGreaterThanOrEqual(16);
+    expect(
+      captionBox!.y - (lastBox!.y + lastBox!.height),
+    ).toBeGreaterThanOrEqual(16);
+  }
 });
 
 for (const width of [1440, 1280, 360])

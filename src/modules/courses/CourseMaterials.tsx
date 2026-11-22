@@ -44,7 +44,7 @@ export function CourseMaterials({ files }: { files: CourseFile[] }) {
                 <h3>{group.title}</h3>
                 <ul>
                   {group.files.map((file) => (
-                    <li key={file.id}>
+                    <li id={`material-${file.id}`} key={file.id}>
                       <a href={`/api/files/${file.id}`} className={s.file}>
                         <Icon size={19} aria-hidden="true" />
                         <span>

@@ -35,34 +35,32 @@ export function LoginForm() {
         }
       }}
     >
-      <div>
-        <h1>С возвращением</h1>
-        <p className={ui.muted}>Войдите в свой студенческий кабинет</p>
-      </div>
-      <label>
-        Email
+      <h2 className={s.formTitle}>Личный кабинет студента</h2>
+      <label className={s.field}>
         <input
           name="email"
           type="email"
           autoComplete="username"
           required
-          placeholder="student@example.org"
+          placeholder=" "
         />
+        <span className={s.fieldLabel}>Логин</span>
       </label>
-      <label>
-        Пароль
+      <label className={s.field}>
         <input
           name="password"
           type="password"
           autoComplete="current-password"
           required
           minLength={8}
+          placeholder=" "
         />
+        <span className={s.fieldLabel}>Пароль</span>
       </label>
       {error && (
         <p className={`${ui.alert} ${ui.error}`} role="alert">
           {error === "Invalid email or password"
-            ? "Неверный email или пароль."
+            ? "Неверный логин или пароль."
             : error}
         </p>
       )}
@@ -70,8 +68,7 @@ export function LoginForm() {
         {busy ? "Входим…" : "Войти в кабинет"}
       </Button>
       <p className={s.note}>
-        Регистрация закрыта. Для входа используйте выданный демонстрационный
-        аккаунт.
+        Для входа используйте выданную демонстрационную учётную запись.
       </p>
     </form>
   );

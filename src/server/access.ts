@@ -15,7 +15,12 @@ export async function requireStudent(requestHeaders?: Headers) {
     include: { group: { include: { program: true } }, preference: true },
   });
   if (!student) throw notFound();
-  return { ...student, name: session.user.name, email: session.user.email };
+  return {
+    ...student,
+    name: session.user.name,
+    email: session.user.email,
+    image: session.user.image,
+  };
 }
 export type StudentContext = Awaited<ReturnType<typeof requireStudent>>;
 export const pageStudent = cache(async function pageStudent() {

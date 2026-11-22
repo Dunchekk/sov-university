@@ -1,6 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
 import { Integrations } from "./CalendarIntegrations";
 import { Card, ui } from "@/shared/ui/primitives";
+import { brand } from "@/shared/config/brand";
 import s from "./calendar.module.css";
 
 export type CalendarConnectionsData = {
@@ -122,8 +123,8 @@ export function CalendarConnections({
       </details>
       <p className={ui.caption}>
         Подписка односторонняя: изменения во внешнем календаре не меняют
-        расписание в «Рядом». Это демонстрационный кабинет без подключения к
-        университетским системам.
+        расписание в личном кабинете {brand.name}. Это демонстрационный кабинет
+        без подключения к университетским системам.
       </p>
     </div>
   );

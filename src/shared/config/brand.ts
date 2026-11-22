@@ -1,7 +1,10 @@
+export const university = {
+  type: "Университет",
+  disciplines: "связи, оптики и вычислений",
+} as const;
+
 export const brand = {
-  name: "Рядом",
-  mark: "р",
-  university: "Университет Северный",
-  tagline: "Всё складывается в твою пользу",
+  name: "СОВ",
+  university: `${university.type} ${university.disciplines}`,
   disclaimer: "Учебный прототип. Данные вымышлены.",
 } as const;

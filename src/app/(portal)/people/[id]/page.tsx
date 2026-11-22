@@ -5,6 +5,7 @@ import { db } from "@/server/db";
 import { pageStudent } from "@/server/access";
 import { Badge, Card, ui } from "@/shared/ui/primitives";
 import { CopyButton } from "@/shared/ui/CopyButton";
+import { BreadcrumbTitle } from "@/shared/ui/shell/BreadcrumbTitle";
 import { LecturerPortrait } from "../LecturerPortrait";
 import s from "../people.module.css";
 
@@ -41,6 +42,11 @@ export default async function LecturerPage({
 
   return (
     <article>
+      <BreadcrumbTitle
+        path={`/people/${encodeURIComponent(id)}`}
+        title={lecturer.name}
+        parentHref="/people?tab=all"
+      />
       <Link href="/people?tab=all" className={s.back}>
         <ArrowLeft size={16} aria-hidden /> Все преподаватели
       </Link>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Wallet, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Download } from "lucide-react";
 import { pageStudent } from "@/server/access";
 import { finances } from "@/modules/finance/service";
 import {
@@ -12,6 +12,8 @@ import {
 } from "@/shared/ui/primitives";
 import { formatDate, money } from "@/shared/lib/time";
 import { statusLabel } from "@/shared/config/statuses";
+import { brand } from "@/shared/config/brand";
+import s from "./finance.module.css";
 export default async function FinancePage({
   searchParams,
 }: {
@@ -59,7 +61,7 @@ export default async function FinancePage({
           ))}
           <h2>Открытые кампании</h2>
           {data.campaigns.map((c) => (
-            <Card key={c.id}>
+            <Card key={c.id} id={`campaign-${c.id}`}>
               <div className={ui.stack}>
                 <div className={ui.between}>
                   <h2>{c.title}</h2>
@@ -108,7 +110,7 @@ export default async function FinancePage({
               </thead>
               <tbody>
                 {data.payments.map((p) => (
-                  <tr key={p.id}>
+                  <tr key={p.id} id={`payment-${p.id}`}>
                     <td>{p.title}</td>
                     <td>{p.period}</td>
                     <td>{money(p.amountKopecks)}</td>
@@ -135,11 +137,15 @@ export default async function FinancePage({
         </Card>
       ) : tab === "contracts" ? (
         <div className={ui.stack}>
+          <h2>Мои договоры</h2>
           {data.contracts.map((c) => (
-            <Card key={c.id}>
+            <Card key={c.id} id={`contract-${c.id}`}>
               <div className={ui.stack}>
                 <div className={ui.between}>
-                  <h2>{c.number}</h2>
+                  <div>
+                    <h3>Договор об образовании с {brand.name}</h3>
+                    <p className={ui.caption}>№ {c.number}</p>
+                  </div>
                   <Badge>{c.status}</Badge>
                 </div>
                 <p>{c.title}</p>
@@ -179,7 +185,8 @@ export default async function FinancePage({
                       key={f.id}
                       href={`/api/files/${f.id}`}
                     >
-                      Скачать демонстрационный договор
+                      <Download size={16} aria-hidden />
+                      Скачать договор (PDF)
                     </a>
                   ))}
                   <Link
@@ -210,10 +217,9 @@ export default async function FinancePage({
       ) : (
         <div className={ui.stack}>
           <div className={ui.grid3}>
-            <Card>
-              <Wallet size={20} />
+            <Card className={s.summaryCard}>
               <p className={ui.caption}>Следующая ожидаемая выплата</p>
-              <p className={ui.largeNumber}>
+              <p className={`${ui.largeNumber} ${s.summaryValue}`}>
                 {expected[0]
                   ? money(expected[0].amountKopecks)
                   : "Нет назначений"}
@@ -224,22 +230,26 @@ export default async function FinancePage({
                   : "Открытые кампании — во вкладке стипендий"}
               </p>
             </Card>
-            <Card>
+            <Card className={s.summaryCard}>
               <p className={ui.caption}>Выплачено за доступный период</p>
-              <p className={ui.largeNumber}>{money(paid)}</p>
+              <p className={`${ui.largeNumber} ${s.summaryValue}`}>
+                {money(paid)}
+              </p>
               <p className={ui.caption}>
                 Только выплаты со статусом «Выплачено»
               </p>
             </Card>
-            <Card>
+            <Card className={s.summaryCard}>
               <p className={ui.caption}>Форма финансирования</p>
-              <h2>{student.funding}</h2>
+              <p className={`${ui.largeNumber} ${s.summaryValue}`}>
+                {student.funding}
+              </p>
               <Link href="/finance?tab=contracts" className={ui.link}>
                 Договоры и график →
               </Link>
             </Card>
           </div>
-          <Card>
+          <Card className={ui.stack}>
             <h2>Финансовые документы</h2>
             <div className={ui.row}>
               <Link className={ui.button} href="/services/scholarship-payments">

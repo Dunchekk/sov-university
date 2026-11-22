@@ -17,7 +17,6 @@ import {
   Plus,
   SlidersHorizontal,
   ArrowUpRight,
-  Download,
   MapPin,
   UserRound,
   Clock3,
@@ -684,36 +683,31 @@ export function Calendar({
                   <small>{formatDate(c.createdAt)}</small>
                 </div>
               ))}
-              <div className={ui.row}>
-                {selected.href && (
-                  <Link
-                    className={`${ui.button} ${ui.primary}`}
-                    href={selected.href}
-                  >
-                    {selected.courseId
-                      ? "Открыть дисциплину"
-                      : "Открыть подробности"}
-                    <ArrowUpRight size={15} />
-                  </Link>
-                )}
-                {selected.url && (
-                  <a
-                    className={ui.button}
-                    href={selected.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Онлайн-ресурс
-                  </a>
-                )}
-                <a
-                  className={ui.button}
-                  href={`/api/calendar/export.ics?from=${eventDate(selected)}&to=${addDays(eventDate(selected), 1)}&event=${selected.id}&types=${selected.type}${selected.comparison ? `&schedules=${encodeURIComponent(params.get("schedules") ?? "")}` : ""}`}
-                >
-                  <Download size={15} />
-                  Добавить в свой календарь
-                </a>
-              </div>
+              {(selected.href || selected.url) && (
+                <div className={ui.row}>
+                  {selected.href && (
+                    <Link
+                      className={`${ui.button} ${ui.primary}`}
+                      href={selected.href}
+                    >
+                      {selected.courseId
+                        ? "Открыть дисциплину"
+                        : "Открыть подробности"}
+                      <ArrowUpRight size={15} />
+                    </Link>
+                  )}
+                  {selected.url && (
+                    <a
+                      className={ui.button}
+                      href={selected.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Онлайн-ресурс
+                    </a>
+                  )}
+                </div>
+              )}
               {selected.editable && !selected.cancelled && (
                 <div className={ui.row}>
                   <Button onClick={() => setEdit(true)}>Изменить</Button>

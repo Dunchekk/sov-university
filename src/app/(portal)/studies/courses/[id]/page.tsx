@@ -9,6 +9,7 @@ import { GradeBreakdown } from "@/modules/assessment/GradeBreakdown";
 import { AttendanceIndicator } from "@/modules/assessment/AttendanceIndicator";
 import { Roster } from "@/modules/courses/Roster";
 import { rosterFilters } from "@/modules/courses/roster-filters";
+import { courseTabs } from "@/modules/courses/tabs";
 import { filterValue, type FilterParams } from "@/shared/lib/filters";
 import { CourseMaterials } from "@/modules/courses/CourseMaterials";
 import { courseMaterialTypes } from "@/modules/courses/materials";
@@ -21,13 +22,6 @@ import {
   ui,
 } from "@/shared/ui/primitives";
 import { formatDate, formatTime, dateKey } from "@/shared/lib/time";
-const tabs = [
-  ["overview", "Обзор"],
-  ["materials", "Материалы и задания"],
-  ["assessment", "Оценивание"],
-  ["people", "Участники"],
-  ["lessons", "Занятия"],
-] as const;
 export default async function CoursePage({
   params,
   searchParams,
@@ -39,7 +33,7 @@ export default async function CoursePage({
   const { id } = await params;
   const query = await searchParams;
   const tab =
-    tabs.find(([id]) => id === filterValue(query.tab))?.[0] ?? "overview";
+    courseTabs.find(([id]) => id === filterValue(query.tab))?.[0] ?? "overview";
   const participants = rosterFilters(query);
   const result = await pageData(courseResult(student, id));
   const course = result.enrollment.course;
@@ -87,6 +81,13 @@ export default async function CoursePage({
     <>
       <PageTitle
         title={course.name}
+        breadcrumb={{
+          path: `/studies/courses/${encodeURIComponent(id)}`,
+          parentHref:
+            result.enrollment.status === "COMPLETED"
+              ? "/studies/courses?semester=past"
+              : undefined,
+        }}
         description={`${course.code} · ${course.semester} семестр · ${student.group.name} · ${course.assessmentType}`}
         action={
           <Link href={`/calendar?course=${id}`} className={ui.button}>
@@ -97,7 +98,7 @@ export default async function CoursePage({
       />
       <Tabs
         active={tab}
-        items={tabs.map(([key, label]) => ({
+        items={courseTabs.map(([key, label]) => ({
           id: key,
           label,
           href: `/studies/courses/${id}?tab=${key}`,
@@ -121,7 +122,11 @@ export default async function CoursePage({
           <Card>
             <h2>Задания и сроки</h2>
             {result.assessments.map((a) => (
-              <div key={a.id} className={`${ui.stack} ${ui.listItem}`}>
+              <div
+                id={`assessment-${a.id}`}
+                key={a.id}
+                className={`${ui.stack} ${ui.listItem}`}
+              >
                 <div className={ui.between}>
                   <h3>{a.title}</h3>
                   <Badge tone="danger">

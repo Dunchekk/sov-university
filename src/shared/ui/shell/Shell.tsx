@@ -1,5 +1,12 @@
 "use client";
-import { Suspense, useState, type ReactNode } from "react";
+import {
+  Suspense,
+  useEffect,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,6 +17,7 @@ import {
   Wallet,
   Users,
   Compass,
+  MessagesSquare,
   LifeBuoy,
   Settings,
   PanelLeftClose,
@@ -19,11 +27,16 @@ import {
   X,
 } from "lucide-react";
 import { Avatar, Button } from "../primitives";
+import { BrandMark } from "../BrandMark";
 import { PageContainer } from "../PageContainer";
 import { Search } from "./Search";
 import { NotificationPopover } from "./NotificationPopover";
+import { FeedbackDialog } from "./FeedbackDialog";
+import { NavigationOverlay } from "./NavigationOverlay";
 import { Breadcrumbs, BreadcrumbTrail } from "./Breadcrumbs";
+import { BreadcrumbTitleProvider } from "./BreadcrumbTitle";
 import { brand } from "@/shared/config/brand";
+import { avatarEndpoint } from "@/modules/students/avatar";
 import { api } from "@/shared/lib/client";
 import s from "./shell.module.css";
 const study = [
@@ -47,22 +60,32 @@ const secondaryLabels: Record<string, string> = {
   "/settings": "Настройки",
   "/notifications": "Уведомления",
   "/support": "Поддержка",
-  "/requests": "Мои обращения",
 };
 
-function NavigationPending() {
+function NavigationPending({
+  setPendingLinks,
+}: {
+  setPendingLinks: Dispatch<SetStateAction<number>>;
+}) {
   const { pending } = useLinkStatus();
+  useEffect(() => {
+    if (!pending) return;
+    setPendingLinks((count) => count + 1);
+    return () => setPendingLinks((count) => count - 1);
+  }, [pending, setPendingLinks]);
   return pending ? <span aria-hidden className={s.navPending} /> : null;
 }
 
 export function Shell({
   name,
+  avatar,
   group,
   unread,
   collapsed: initial,
   children,
 }: {
   name: string;
+  avatar: string | null;
   group: string;
   unread: number;
   collapsed: boolean;
@@ -71,7 +94,11 @@ export function Shell({
   const path = usePathname();
   const [collapsed, setCollapsed] = useState(initial),
     [mobile, setMobile] = useState(false),
+    [feedbackOpen, setFeedbackOpen] = useState(false),
     [expanded, setExpanded] = useState(true),
+    [prefetchTarget, setPrefetchTarget] = useState<string>(),
+    [loaderPrepared, setLoaderPrepared] = useState(false),
+    [pendingLinks, setPendingLinks] = useState(0),
     [error, setError] = useState("");
   const active = (href: string) =>
     path === href || (href !== "/" && path.startsWith(`${href}/`));
@@ -80,21 +107,30 @@ export function Shell({
     ? { href: studySection[0], label: studySection[1] }
     : (nav.find((n) => active(n.href)) ?? {
         href: path,
-        label: secondaryLabels[path] ?? "Личный кабинет",
+        label: secondaryLabels[path] ?? "Страница не найдена",
       });
+  const sidebarLink = (href: string) => ({
+    href,
+    prefetch: href !== path && prefetchTarget === href ? true : undefined,
+    onMouseEnter: () => setPrefetchTarget(href),
+    onFocus: () => setPrefetchTarget(href),
+    onNavigate: () => {
+      setMobile(false);
+      if (href !== path) setLoaderPrepared(true);
+    },
+  });
   const item = (href: string, label: string, Icon: typeof House) => (
     <Link
-      href={href}
+      {...sidebarLink(href)}
       key={href}
       className={s.navItem}
       aria-current={active(href) ? "page" : undefined}
       aria-label={collapsed ? label : undefined}
       title={collapsed ? label : undefined}
-      onClick={() => setMobile(false)}
     >
       <Icon size={19} strokeWidth={1.7} />
       <span className={s.label}>{label}</span>
-      <NavigationPending />
+      {href !== path && <NavigationPending setPendingLinks={setPendingLinks} />}
     </Link>
   );
   return (
@@ -102,23 +138,32 @@ export function Shell({
       className={`${s.shell} ${collapsed ? s.collapsed : ""} ${mobile ? s.mobileOpen : ""}`}
     >
       <aside className={s.sidebar} aria-label="Основная навигация">
-        <Link href="/" className={s.brand}>
-          <span className={s.mark}>{brand.mark}</span>
+        <Link {...sidebarLink("/")} className={s.brand} aria-label={brand.name}>
+          <BrandMark />
           <span className={s.label}>{brand.name}</span>
+          {path !== "/" && (
+            <NavigationPending setPendingLinks={setPendingLinks} />
+          )}
         </Link>
         <Link
-          href="/profile"
+          {...sidebarLink("/profile")}
           className={s.profile}
-          onClick={() => setMobile(false)}
           aria-label="Мой профиль"
         >
-          <Avatar name={name} />
+          <Avatar
+            name={name}
+            src={avatar}
+            unoptimized={avatar?.startsWith(avatarEndpoint)}
+          />
           <div className={s.profileText}>
             <strong>
               {name.split(" ")[0]} {name.split(" ")[1]?.slice(0, 1)}.
             </strong>
             <small>{group} · 2 курс</small>
           </div>
+          {path !== "/profile" && (
+            <NavigationPending setPendingLinks={setPendingLinks} />
+          )}
         </Link>
         <nav className={s.nav}>
           {nav.slice(0, 2).map((n) => item(n.href, n.label, n.icon))}
@@ -135,25 +180,35 @@ export function Shell({
             <span className={s.label}>Учёба</span>
             <ChevronDown size={14} className={s.label} />
           </button>
-          {expanded && (
-            <div className={s.subnav}>
-              {study.map(([href, label]) => (
-                <Link
-                  href={href}
-                  key={href}
-                  className={s.navItem}
-                  aria-current={active(href) ? "page" : undefined}
-                  onClick={() => setMobile(false)}
-                >
-                  {label}
-                  <NavigationPending />
-                </Link>
-              ))}
-            </div>
-          )}
+          <div className={s.subnav} hidden={!expanded}>
+            {study.map(([href, label]) => (
+              <Link
+                {...sidebarLink(href)}
+                key={href}
+                className={s.navItem}
+                aria-current={active(href) ? "page" : undefined}
+              >
+                {label}
+                {href !== path && (
+                  <NavigationPending setPendingLinks={setPendingLinks} />
+                )}
+              </Link>
+            ))}
+          </div>
           {nav.slice(2).map((n) => item(n.href, n.label, n.icon))}
         </nav>
         <div className={s.bottom}>
+          <button
+            type="button"
+            className={`${s.navItem} ${s.feedbackButton}`}
+            aria-label="Выразительная кнопка"
+            aria-haspopup="dialog"
+            title={collapsed ? "Выразительная кнопка" : undefined}
+            onClick={() => setFeedbackOpen(true)}
+          >
+            <MessagesSquare size={19} strokeWidth={1.7} aria-hidden />
+            <span className={s.label}>Выразительная кнопка</span>
+          </button>
           {item("/support", "Поддержка", LifeBuoy)}
           {item("/settings", "Настройки", Settings)}
           <div className={s.collapse}>
@@ -183,32 +238,39 @@ export function Shell({
           </div>
         </div>
       </aside>
-      <div className={s.workspace}>
-        <header className={s.header}>
-          <Button
-            className={s.mobileMenu}
-            aria-label={mobile ? "Закрыть меню" : "Открыть меню"}
-            onClick={() => setMobile((v) => !v)}
-          >
-            {mobile ? <X size={19} /> : <Menu size={19} />}
-          </Button>
-          <Suspense
-            fallback={
-              <BreadcrumbTrail
-                parent={{ href: "/", label: "Личный кабинет" }}
-                title={section.label}
-              />
-            }
-          >
-            <Breadcrumbs path={path} section={section} />
-          </Suspense>
-          <div className={s.headerActions}>
-            <Search />
-            <NotificationPopover key={path} unread={unread} />
-          </div>
-        </header>
-        <PageContainer>{children}</PageContainer>
-      </div>
+      <BreadcrumbTitleProvider>
+        <div className={s.workspace}>
+          <header className={s.header}>
+            <Button
+              className={s.mobileMenu}
+              aria-label={mobile ? "Закрыть меню" : "Открыть меню"}
+              onClick={() => setMobile((v) => !v)}
+            >
+              {mobile ? <X size={19} /> : <Menu size={19} />}
+            </Button>
+            <Suspense fallback={<BreadcrumbTrail title={section.label} />}>
+              <Breadcrumbs path={path} section={section} />
+            </Suspense>
+            <div className={s.headerActions}>
+              <Search />
+              <NotificationPopover key={path} unread={unread} />
+            </div>
+          </header>
+          <PageContainer>{children}</PageContainer>
+          <NavigationOverlay
+            pending={pendingLinks > 0}
+            prepared={loaderPrepared}
+          />
+        </div>
+      </BreadcrumbTitleProvider>
+      <FeedbackDialog
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        onNavigate={() => {
+          setFeedbackOpen(false);
+          setMobile(false);
+        }}
+      />
     </div>
   );
 }

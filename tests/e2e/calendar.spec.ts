@@ -9,6 +9,67 @@ const event = (body: string) => `BEGIN:VEVENT\r\n${body}\r\nEND:VEVENT`;
 const fixed =
   "UID:series\r\nDTSTART;TZID=Europe/Berlin:20260322T100000\r\nDURATION:PT1H\r\nRRULE:FREQ=WEEKLY;COUNT=3\r\nEXDATE;TZID=Europe/Berlin:20260329T100000\r\nSUMMARY:Семинар";
 
+test("a hidden assessment disappears from both calendars without changing course results", async ({
+  student,
+  other,
+}) => {
+  const assessment = await db.assessment.findUniqueOrThrow({
+    where: { id: "assessment-1-0" },
+  });
+  const from = dateKey(assessment.dueAt);
+  const range = `from=${from}&to=${addDays(from, 1)}&types=DEADLINE`;
+  const accounts = [student, other];
+  const resultsPath = `/api/courses/${assessment.courseId}/results`;
+  const before = await Promise.all(
+    accounts.map(async (account) => {
+      const listed = await account.get(`/api/calendar/events?${range}`);
+      expect(listed.ok()).toBe(true);
+      expect(await listed.json()).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: assessment.id }),
+        ]),
+      );
+      const result = await account.get(resultsPath);
+      expect(result.ok()).toBe(true);
+      return result.json();
+    }),
+  );
+
+  try {
+    await db.assessment.update({
+      where: { id: assessment.id },
+      data: { calendarVisible: false },
+    });
+    for (const [index, account] of accounts.entries()) {
+      const listed = await account.get(
+        `/api/calendar/events?${range}&course=${assessment.courseId}`,
+      );
+      expect(listed.ok()).toBe(true);
+      expect(await listed.json()).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: assessment.id }),
+        ]),
+      );
+      const ics = await account.get(`/api/calendar/export.ics?${range}`);
+      expect(ics.ok()).toBe(true);
+      expect(await ics.text()).not.toContain(
+        `UID:${assessment.id}@ryadom.local`,
+      );
+      const result = await account.get(resultsPath);
+      expect(result.ok()).toBe(true);
+      expect(await result.json()).toEqual(before[index]);
+    }
+  } finally {
+    await db.assessment.update({
+      where: { id: assessment.id },
+      data: {
+        calendarVisible: assessment.calendarVisible,
+        updatedAt: assessment.updatedAt,
+      },
+    });
+  }
+});
+
 test("loaded events use browser history and schedule searches wait for the dialog", async ({
   studentPage: page,
 }) => {

@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Fragment } from "react";
+import { courseTabs } from "@/modules/courses/tabs";
+import { useBreadcrumbTitle } from "./BreadcrumbTitle";
 import s from "./shell.module.css";
 
 const tabs: Record<
@@ -33,11 +36,24 @@ const tabs: Record<
   "/people": {
     initial: "teachers",
     labels: {
-      teachers: "Преподаватели",
+      teachers: "Мои преподаватели",
       all: "Все преподаватели",
       group: "Моя группа",
       departments: "Подразделения",
     },
+  },
+  "/profile": {
+    initial: "overview",
+    labels: {
+      overview: "Основное",
+      documents: "Документы",
+      history: "Учебная история",
+    },
+  },
+  "/studies/courses": {
+    key: "semester",
+    initial: "current",
+    labels: { current: "Текущий семестр", past: "Завершённые" },
   },
   "/studies/results": {
     key: "status",
@@ -51,30 +67,41 @@ const tabs: Record<
 };
 
 const details: Record<string, string> = {
-  "/calendar": "Календарь с собой",
-  "/community": "О событии",
-  "/services": "Оформление услуги",
+  "/community": "Событие",
+  "/services": "Услуга",
   "/people": "Преподаватель",
-  "/studies/courses": "О дисциплине",
-  "/studies/projects": "О проекте",
-  "/studies/achievements": "О достижении",
+  "/studies/courses": "Дисциплина",
+  "/studies/projects": "Проект",
+  "/studies/achievements": "Достижение",
 };
 
 type Section = { href: string; label: string };
+const home = { href: "/", label: "Главная" };
+const requests = { href: "/services?tab=requests", label: "Мои обращения" };
 
 export function BreadcrumbTrail({
-  parent,
+  parents = [],
   title,
 }: {
-  parent: Section;
+  parents?: { label: string; href?: string }[];
   title: string;
 }) {
   return (
     <nav aria-label="Хлебные крошки" className={s.breadcrumb}>
-      <Link href={parent.href} title={parent.label}>
-        {parent.label}
-      </Link>
-      <span aria-hidden="true">/</span>
+      {parents.map(({ href, label }) => (
+        <Fragment key={href ?? label}>
+          {href ? (
+            <Link href={href} title={label} className={s.breadcrumbParent}>
+              {label}
+            </Link>
+          ) : (
+            <span title={label} className={s.breadcrumbParent}>
+              {label}
+            </span>
+          )}
+          <span aria-hidden="true">/</span>
+        </Fragment>
+      ))}
       <span aria-current="page" title={title}>
         {title}
       </span>
@@ -90,45 +117,71 @@ export function Breadcrumbs({
   section: Section;
 }) {
   const params = useSearchParams();
-  if (path.startsWith("/requests/"))
+  const entry = useBreadcrumbTitle(path);
+  if (path === "/") return <BreadcrumbTrail title={home.label} />;
+  if (/^\/requests\/[^/]+$/.test(path))
     return (
       <BreadcrumbTrail
-        parent={{ href: "/services?tab=requests", label: "Мои обращения" }}
-        title="Обращение"
+        parents={[requests]}
+        title={entry?.title ?? "Обращение"}
       />
     );
-  if (path.startsWith("/community/news/"))
+  if (/^\/community\/news\/[^/]+$/.test(path))
     return (
       <BreadcrumbTrail
-        parent={{ href: "/community?tab=news", label: "Новости" }}
-        title="О новости"
+        parents={[{ href: "/community?tab=news", label: "Новости" }]}
+        title={entry?.title ?? "Новость"}
       />
     );
+  if (path === "/calendar/integrations")
+    return <BreadcrumbTrail parents={[section]} title="Календарь с собой" />;
   if (path === "/studies/achievements/new")
-    return <BreadcrumbTrail parent={section} title="Новое достижение" />;
+    return <BreadcrumbTrail parents={[section]} title="Новое достижение" />;
 
-  const tab = path === section.href ? tabs[path] : undefined;
-  if (tab) {
-    const selected = params.get(tab.key ?? "tab");
+  if (path === section.href) {
+    const tab = tabs[path];
+    const selected = tab && params.get(tab.key ?? "tab");
+    const tabLabel =
+      tab &&
+      (selected && Object.hasOwn(tab.labels, selected)
+        ? tab.labels[selected]
+        : tab.labels[tab.initial]);
+    const title = entry?.title ?? tabLabel ?? section.label;
     return (
       <BreadcrumbTrail
-        parent={section}
-        title={
-          (selected &&
-            Object.hasOwn(tab.labels, selected) &&
-            tab.labels[selected]) ||
-          tab.labels[tab.initial]
-        }
+        parents={[
+          title === section.label
+            ? home
+            : {
+                label: section.label,
+                href: params.size ? section.href : undefined,
+              },
+        ]}
+        title={title}
       />
     );
   }
 
-  const detail = path !== section.href ? details[section.href] : undefined;
-  if (detail) return <BreadcrumbTrail parent={section} title={detail} />;
-  return (
+  const detail = details[section.href];
+  if (!detail || path.slice(section.href.length + 1).includes("/"))
+    return <BreadcrumbTrail parents={[home]} title="Страница не найдена" />;
+
+  const parent =
+    section.href === "/community"
+      ? { href: "/community?tab=events", label: "События" }
+      : section.href === "/services" && params.get("draft")
+        ? requests
+        : { ...section, href: entry?.parentHref ?? section.href };
+  const title = entry?.title ?? detail;
+  const courseTab =
+    section.href === "/studies/courses" &&
+    courseTabs.find(([id]) => id !== "overview" && id === params.get("tab"));
+  return courseTab ? (
     <BreadcrumbTrail
-      parent={{ href: "/", label: "Личный кабинет" }}
-      title={section.label}
+      parents={[parent, { href: path, label: title }]}
+      title={courseTab[1]}
     />
+  ) : (
+    <BreadcrumbTrail parents={[parent]} title={title} />
   );
 }

@@ -1,6 +1,7 @@
 import { pageStudent } from "@/server/access";
 import { db } from "@/server/db";
 import { Shell } from "@/shared/ui/shell/Shell";
+import { profileAvatarSrc } from "@/modules/students/avatar";
 export default async function PortalLayout({
   children,
 }: {
@@ -13,6 +14,7 @@ export default async function PortalLayout({
   return (
     <Shell
       name={student.name}
+      avatar={profileAvatarSrc(student.image)}
       group={student.group.name}
       unread={unread}
       collapsed={student.preference?.sidebarCollapsed ?? false}

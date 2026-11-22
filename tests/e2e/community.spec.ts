@@ -131,6 +131,55 @@ test("community filters publications and opens illustrated details", async ({
   ).toBeVisible();
 });
 
+test("event bookmark fills immediately and survives reload and removal", async ({
+  studentPage: page,
+  student,
+}) => {
+  const id = "event-2";
+  const apiPath = `/api/community/${id}`;
+  const event = await (await student.get(apiPath)).json();
+  const initial = event.savedBy[0] ?? { saved: false, inCalendar: false };
+  let releaseSave!: () => void;
+  const savePaused = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  try {
+    expect(
+      (await student.patch(apiPath, { data: { saved: false } })).ok(),
+    ).toBe(true);
+    await page.route(`**${apiPath}`, async (route) => {
+      if (route.request().method() === "PATCH") await savePaused;
+      await route.continue();
+    });
+    await page.goto(`/community/${id}`);
+    const save = page.getByRole("button", { name: "Сохранить событие" });
+    const remove = page.getByRole("button", { name: "Убрать из сохранённых" });
+    await expect(save.locator("svg")).toHaveAttribute("fill", "none");
+    await save.click();
+    await expect(remove).toHaveAttribute("aria-pressed", "true");
+    await expect(remove.locator("svg")).toHaveAttribute("fill", "currentColor");
+    await expect(remove).toBeDisabled();
+    releaseSave();
+    await expect(remove).toBeEnabled();
+    await page.reload();
+    await expect(remove.locator("svg")).toHaveAttribute("fill", "currentColor");
+
+    await page.goto("/community?tab=saved");
+    const savedEvent = page.getByRole("link", {
+      name: new RegExp(event.title),
+    });
+    await savedEvent.click();
+    await remove.click();
+    await expect(save).toBeEnabled();
+    await expect(save.locator("svg")).toHaveAttribute("fill", "none");
+    await page.goto("/community?tab=saved");
+    await expect(savedEvent).toHaveCount(0);
+  } finally {
+    releaseSave();
+    await student.patch(apiPath, { data: initial });
+  }
+});
+
 test("the new edition shows original illustrated event and news stories", async ({
   studentPage: page,
 }) => {

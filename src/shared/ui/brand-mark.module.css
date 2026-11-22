@@ -1,0 +1,19 @@
+.mark {
+  position: relative;
+  display: block;
+  flex: none;
+  inline-size: var(--brand-mark-size, 36px);
+  aspect-ratio: 1;
+  background: light-dark(#000, #fff);
+  mask: url("/brand/owl.png") center / contain no-repeat;
+  forced-color-adjust: none;
+}
+
+.mark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #ffc52d;
+  /* Restrict the yellow fill to the beak of the supplied silhouette. */
+  clip-path: polygon(50.2% 43%, 53.5% 46.3%, 50.2% 53%, 46.7% 46.3%);
+}

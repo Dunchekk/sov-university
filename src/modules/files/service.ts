@@ -7,6 +7,7 @@ import type { StudentContext } from "@/server/access";
 import { z } from "zod";
 import { readLimited } from "@/server/body";
 import { courseMaterialTypes } from "@/modules/courses/materials";
+import { avatarPurpose } from "@/modules/students/avatar";
 const inputSchema = z.object({
   purpose: z.enum([
     "REQUEST_ATTACHMENT",
@@ -17,6 +18,7 @@ const inputSchema = z.object({
 });
 export const storageRoot = () =>
   resolve(/* turbopackIgnore: true */ process.env.STORAGE_DIR ?? ".data/files");
+export const studentStorageLimit = 50 * 1024 * 1024;
 export function validatePdf(name: string, mime: string, data: Buffer) {
   invariant(
     /\.pdf$/i.test(name) &&
@@ -61,7 +63,7 @@ export async function uploadFile(request: Request, student: StudentContext) {
         _sum: { size: true },
       });
       invariant(
-        (used._sum.size ?? 0) + data.length <= 50 * 1024 * 1024,
+        (used._sum.size ?? 0) + data.length <= studentStorageLimit,
         413,
         "QUOTA",
         "Лимит хранилища — 50 MiB.",
@@ -133,6 +135,7 @@ export async function downloadFile(student: StudentContext, id: string) {
   const file = await db.fileObject.findFirst({
     where: {
       id,
+      purpose: { not: avatarPurpose },
       OR: [
         { studentId: student.id },
         {

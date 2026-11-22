@@ -297,19 +297,20 @@ model ScheduleChange {
 }
 
 model Assessment {
-  id          String   @id
-  courseId    String
-  course      Course   @relation(fields: [courseId], references: [id])
-  title       String
-  maxPoints   Int
-  mandatory   Boolean  @default(false)
-  dueAt       DateTime
-  instruction String
-  kind        String   @default("DEADLINE")
-  sequence    Int      @default(0)
-  results     Result[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id
+  courseId        String
+  course          Course   @relation(fields: [courseId], references: [id])
+  title           String
+  maxPoints       Int
+  mandatory       Boolean  @default(false)
+  dueAt           DateTime
+  calendarVisible Boolean  @default(true)
+  instruction     String
+  kind            String   @default("DEADLINE")
+  sequence        Int      @default(0)
+  results         Result[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@unique([id, courseId])
   @@index([dueAt])

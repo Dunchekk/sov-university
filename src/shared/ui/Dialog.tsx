@@ -17,6 +17,7 @@ const DialogContent = memo(
   function DialogContent({
     title,
     subtitle,
+    titleIcon,
     children,
     titleId,
     onClose,
@@ -25,18 +26,29 @@ const DialogContent = memo(
     open: boolean;
     title: string;
     subtitle?: string;
+    titleIcon?: ReactNode;
     children: ReactNode;
     titleId: string;
     onClose: () => void;
     dismissible: boolean;
   }) {
+    const heading = (
+      <div>
+        <h2 id={titleId}>{title}</h2>
+        {subtitle && <p className={s.muted}>{subtitle}</p>}
+      </div>
+    );
     return (
       <div className={s.dialogBody}>
         <div className={s.between}>
-          <div>
-            <h2 id={titleId}>{title}</h2>
-            {subtitle && <p className={s.muted}>{subtitle}</p>}
-          </div>
+          {titleIcon ? (
+            <div className={s.dialogHeading}>
+              {titleIcon}
+              {heading}
+            </div>
+          ) : (
+            heading
+          )}
           <Button
             type="button"
             className={s.icon}
@@ -59,6 +71,7 @@ export function Dialog({
   onClose,
   title,
   subtitle,
+  titleIcon,
   children,
   dismissible = true,
   className,
@@ -67,6 +80,7 @@ export function Dialog({
   onClose: () => void;
   title: string;
   subtitle?: string;
+  titleIcon?: ReactNode;
   children: ReactNode;
   dismissible?: boolean;
   className?: string;
@@ -207,6 +221,7 @@ export function Dialog({
         open={open}
         title={title}
         subtitle={subtitle}
+        titleIcon={titleIcon}
         titleId={titleId}
         onClose={requestClose}
         dismissible={dismissible}

@@ -211,6 +211,87 @@ const campuses = [
   },
 ];
 
+const additionalCompleted: (Omit<CourseFixture, "closed"> & {
+  programId?: "design" | "engineering";
+})[] = [
+  {
+    slug: "digital-ethics",
+    name: "Этика цифровых решений",
+    lecturer: 25,
+    credits: 3,
+    description:
+      "Разбираем, как продуктовые решения влияют на пользователей и как обсуждать эти риски в команде.",
+    work: [
+      "Разбор продуктового случая",
+      "Карта последствий",
+      "Этическое заключение",
+    ],
+    points: [30, 23, 30],
+  },
+  {
+    slug: "product-analytics",
+    name: "Основы продуктовой аналитики",
+    lecturer: 18,
+    credits: 4,
+    description:
+      "Учимся формулировать продуктовую гипотезу, выбирать показатель успеха и оценивать результаты эксперимента.",
+    work: ["Дерево метрик", "План эксперимента", "Отчёт о результатах"],
+    points: [32, 27, 30],
+  },
+  {
+    programId: "design",
+    slug: "information-typography",
+    name: "Информационная типографика",
+    lecturer: 8,
+    credits: 4,
+    description:
+      "Выстраиваем иерархию длинных текстов и проверяем читаемость на бумаге и экране.",
+    work: ["Анализ набора", "Шкала размеров", "Типографический макет"],
+    points: [34, 27, 31],
+  },
+  {
+    programId: "design",
+    slug: "visual-culture-history",
+    name: "История визуальной культуры",
+    lecturer: 28,
+    credits: 3,
+    description:
+      "Сравниваем плакаты, журналы и экранную графику разных эпох, связывая форму с контекстом.",
+    work: ["Разбор плаката", "Хронология издания", "Сравнительное эссе"],
+    points: [26, 23, 29],
+  },
+  {
+    programId: "engineering",
+    slug: "requirements-engineering",
+    name: "Инженерия требований",
+    lecturer: 11,
+    credits: 4,
+    description:
+      "Разбираем требования к учебному продукту, описываем ограничения и договариваемся о критериях приёмки.",
+    work: [
+      "Интервью с заказчиком",
+      "Карта требований",
+      "Спецификация продукта",
+    ],
+    points: [33, 26, 31],
+  },
+  {
+    programId: "engineering",
+    slug: "functional-programming",
+    name: "Функциональное программирование",
+    lecturer: 29,
+    credits: 3,
+    description:
+      "Практикуем композицию функций и работу с неизменяемыми данными на небольших приложениях.",
+    work: [
+      "Преобразование данных",
+      "Композиция обработчиков",
+      "Функциональный проект",
+    ],
+    points: [29, 24, 30],
+  },
+];
+
 const scoreBands = [
   [6.4, 5],
   [6.8, 8],
@@ -243,15 +324,34 @@ export async function seedAcademicEdition() {
     return date < yearStart ? yearStart : date;
   };
   const lastPublished = midnight(base);
-  const edition = [...common, ...design, ...engineering];
+  const edition = [
+    ...common.map((course) => ({
+      course,
+      audience: campuses,
+      calendarVisible: true,
+    })),
+    ...campuses.flatMap((campus) =>
+      campus.courses.map((course) => ({
+        course,
+        audience: [campus],
+        calendarVisible: true,
+      })),
+    ),
+    ...additionalCompleted.map(({ programId, ...course }) => ({
+      course: { ...course, closed: true as const },
+      audience: campuses.filter(
+        (campus) => !programId || campus.programId === programId,
+      ),
+      calendarVisible: false,
+    })),
+  ];
 
   await db.$transaction(
     async (tx) => {
-      for (const [index, course] of edition.entries()) {
-        const audience = campuses.filter(
-          (campus) =>
-            common.includes(course) || campus.courses.includes(course),
-        );
+      for (const [
+        index,
+        { course, audience, calendarVisible },
+      ] of edition.entries()) {
         const courseId = `course-edition-${course.slug}`;
         const semester = 3;
         const assessmentType = "Экзамен";
@@ -280,7 +380,7 @@ export async function seedAcademicEdition() {
             courseId,
             semester,
             title: course.name,
-            category: "Обязательная часть",
+            category: calendarVisible ? "Обязательная часть" : "Электив",
             credits: course.credits,
             hours: course.credits * 36,
             assessmentType,
@@ -295,6 +395,7 @@ export async function seedAcademicEdition() {
           title,
           maxPoints: [35, 30, 35][step],
           mandatory: step !== 1,
+          calendarVisible,
           dueAt: completed
             ? midnight(earlier([35, 19, 5][step]))
             : atTime(addDays(base, [-8, -2, 24 + index][step]), "18:00"),

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MapPin, Clock3, Flame } from "lucide-react";
-import { ui } from "@/shared/ui/primitives";
+import { Avatar, ui } from "@/shared/ui/primitives";
 import { LecturerLink } from "@/shared/ui/LecturerLink";
 import { nextClasses, eventDate } from "./layout";
 import { formatDate, formatTime, dateKey, addDays } from "@/shared/lib/time";
@@ -10,9 +10,11 @@ import type { CalendarEvent } from "./types";
 import s from "./calendar.module.css";
 export function NextClass({
   events,
+  lecturerAvatars,
   now,
 }: {
   events: CalendarEvent[];
+  lecturerAvatars: Record<string, string>;
   now: string;
 }) {
   const [time, setTime] = useState(now);
@@ -71,7 +73,16 @@ export function NextClass({
             </div>
             {event.lecturer && (
               <div className={s.nextLecturer}>
-                <span className={s.nextLecturerAvatar} aria-hidden />
+                <span className={s.nextLecturerAvatar} aria-hidden>
+                  <Avatar
+                    name={event.lecturer}
+                    src={
+                      event.lecturerId
+                        ? lecturerAvatars[event.lecturerId]
+                        : undefined
+                    }
+                  />
+                </span>
                 <div>
                   <p className={s.nextLecturerName}>
                     <LecturerLink id={event.lecturerId} name={event.lecturer} />

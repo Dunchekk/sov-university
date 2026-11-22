@@ -1,0 +1,10 @@
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.summaryValue {
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}

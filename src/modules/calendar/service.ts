@@ -144,6 +144,7 @@ export async function calendarEvents(
       ? db.assessment.findMany({
           where: {
             course: { enrollments: { some: { studentId: student.id } } },
+            calendarVisible: true,
             ...(q.course ? { courseId: q.course } : {}),
             dueAt: { gte: from, lt: to },
           },

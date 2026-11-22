@@ -128,6 +128,92 @@ test("notification category and unread filters survive pagination", async ({
   }
 });
 
+test("opening a notification marks it read from the inbox, bell and global search", async ({
+  studentPage: page,
+}) => {
+  const notices = [
+    { title: "Необычная проверка расписания", href: "/calendar" },
+    { title: "Необычная проверка выплат", href: "/finance" },
+    {
+      title: "Необычная проверка учебной истории",
+      href: "/profile?tab=history",
+    },
+  ].map((item) => ({ ...item, id: randomUUID() }));
+  await db.notification.createMany({
+    data: notices.map(({ id, title, href }) => ({
+      id,
+      studentId: "student-a",
+      dedupKey: id,
+      category: "CALENDAR",
+      title,
+      body: "Автоматическая проверка статуса",
+      href,
+      createdAt: new Date(2200000000000),
+    })),
+  });
+  try {
+    const totalUnread = await db.notification.count({
+      where: { studentId: "student-a", readAt: null },
+    });
+    const bell = page.getByRole("button", { name: /^Уведомления/ });
+    const inbox = "/notifications?unread=true";
+    const [fromInbox, fromBell, fromSearch] = notices;
+    await page.goto(inbox);
+    await expect(page.getByRole("link", { name: /^Открыть/ })).toHaveCount(0);
+    const notice = page.getByRole("link", { name: fromInbox.title });
+    await expect(notice.getByText("Новое")).toBeVisible();
+    await notice.press("Enter");
+    await expect(page).toHaveURL(new RegExp(`${fromInbox.href}$`));
+    await expect(bell).toHaveAccessibleName(
+      `Уведомления, непрочитанных: ${totalUnread - 1}`,
+    );
+    await page.goBack();
+    await expect(notice).toHaveCount(0);
+
+    await bell.click();
+    const popover = page.getByRole("region", { name: "Уведомления" });
+    await popover
+      .getByRole("link", { name: new RegExp(fromBell.title) })
+      .click();
+    await expect(popover).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`${fromBell.href}$`));
+    await expect(bell).toHaveAccessibleName(
+      `Уведомления, непрочитанных: ${totalUnread - 2}`,
+    );
+
+    await page.getByRole("button", { name: "Глобальный поиск" }).click();
+    await page
+      .getByRole("combobox", { name: "Поисковый запрос" })
+      .fill(fromSearch.title);
+    await page
+      .getByRole("option", { name: new RegExp(fromSearch.title) })
+      .click();
+    await expect(page).toHaveURL(
+      (url) => url.pathname + url.search === fromSearch.href,
+    );
+    await expect(bell).toHaveAccessibleName(
+      totalUnread === 3
+        ? "Уведомления"
+        : `Уведомления, непрочитанных: ${totalUnread - 3}`,
+    );
+
+    await page.goto(inbox);
+    for (const { title } of notices) {
+      await expect(page.getByRole("link", { name: title })).toHaveCount(0);
+    }
+    await page.goto("/notifications");
+    for (const { title } of notices) {
+      const item = page.getByRole("link", { name: title });
+      await expect(item).toBeVisible();
+      await expect(item.getByText("Новое")).toHaveCount(0);
+    }
+  } finally {
+    await db.notification.deleteMany({
+      where: { id: { in: notices.map(({ id }) => id) } },
+    });
+  }
+});
+
 test("services and courses apply real queries and clear empty results", async ({
   studentPage: page,
 }) => {
@@ -135,14 +221,26 @@ test("services and courses apply real queries and clear empty results", async ({
   const search = page.getByRole("textbox", { name: "Поиск услуг" });
   await expect(search).toHaveAttribute("placeholder", "Поиск...");
   await expect(page.getByText("Что нужно?", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Найти", exact: true }),
+  ).toHaveCount(0);
+  const services = page.locator('main a[href^="/services/"] h2');
+  await search.pressSequentially("об обу");
+  await expect(services.first()).toHaveText("Подтверждение обучения");
+  await expect(search).toHaveValue("об обу");
+  await services.first().click();
+  await expect(page).toHaveURL(/\/services\/enrollment$/);
+  await page.goBack();
+  await expect(search).toHaveValue("об обу");
+  await page.reload();
+  await expect(search).toHaveValue("об обу");
+  await expect(services.first()).toHaveText("Подтверждение обучения");
   await search.fill("оплата");
   await page
     .getByRole("combobox", { name: "Категория" })
     .selectOption("Финансы");
-  const services = page.locator('main a[href^="/services/"] h2');
   await expect(services).toHaveText(["Подтверждение оплаты обучения"]);
   await search.fill("%");
-  await search.press("Enter");
   await expect(services).toHaveCount(0);
   await expect(page.getByText("Услуги не найдены")).toBeVisible();
 
@@ -155,7 +253,10 @@ test("services and courses apply real queries and clear empty results", async ({
   );
   await courseSearch.fill("типографика");
   await courseSearch.press("Enter");
-  await expect(courses).toHaveText([/типографика/i]);
+  await expect(courses).toHaveText([
+    "Типографика и вёрстка",
+    "Информационная типографика",
+  ]);
   await page.getByRole("link", { name: "Текущий семестр" }).click();
   await expect(page.getByText("Дисциплины не найдены")).toBeVisible();
   await expect(courseSearch).toHaveValue("типографика");
@@ -163,7 +264,7 @@ test("services and courses apply real queries and clear empty results", async ({
   await expect(courses.first()).toBeVisible();
 });
 
-test("roster combines group and role and restores the selected filters after reload", async ({
+test("roster filters students by group and search while keeping the course teacher", async ({
   studentPage: page,
 }) => {
   const lesson = await db.lesson.findFirstOrThrow({
@@ -176,12 +277,11 @@ test("roster combines group and role and restores the selected filters after rel
   await db.lesson.create({ data: { ...lesson, id, groupId: group.id } });
   try {
     await page.goto("/studies/courses/course-1?tab=people");
-    const role = page.getByRole("combobox", { name: "Роль" });
+    await expect(page.getByRole("combobox", { name: "Роль" })).toHaveCount(0);
     const groupFilter = page.getByRole("combobox", {
       name: "Группа студентов",
     });
     await groupFilter.selectOption(group.id);
-    await role.selectOption("student");
     const students = page.getByText(/^Студент · /);
     await expect(students.first()).toHaveText(`Студент · ${group.name}`);
     expect(
@@ -189,17 +289,14 @@ test("roster combines group and role and restores the selected filters after rel
         text.endsWith(group.name),
       ),
     ).toBe(true);
-    await expect(page.getByText(/^Преподаватель · /)).toHaveCount(0);
+    await expect(page.getByText(/^Преподаватель · /)).toBeVisible();
 
     await page.reload();
-    await expect(role).toHaveValue("student");
     await expect(groupFilter).toHaveValue(group.id);
     await expect(students.first()).toHaveText(`Студент · ${group.name}`);
-    await role.selectOption("teacher");
     await page.getByLabel("Найти участника").fill("точного совпадения нет");
     await expect(page.getByText("Участники не найдены")).toBeVisible();
     await page.getByRole("link", { name: "Участники", exact: true }).click();
-    await expect(role).toHaveValue("");
     await expect(page.getByLabel("Найти участника")).toHaveValue("");
   } finally {
     await db.lesson.delete({ where: { id } });

@@ -7,6 +7,7 @@ import { RequestActions } from "@/modules/requests/RequestActions";
 import { PageTitle, Card, Badge, ui } from "@/shared/ui/primitives";
 import { statusLabel } from "@/shared/config/statuses";
 import { formatDate } from "@/shared/lib/time";
+import s from "./request.module.css";
 export default async function RequestPage({
   params,
 }: {
@@ -36,6 +37,7 @@ export default async function RequestPage({
     <>
       <PageTitle
         title={title}
+        breadcrumb={{ path: `/requests/${encodeURIComponent(id)}` }}
         description={`Обращение № ${String(item.number).padStart(5, "0")} · ${formatDate(item.createdAt)}`}
         action={
           <Badge
@@ -73,39 +75,49 @@ export default async function RequestPage({
                 Продолжить заполнение →
               </Link>
             )}
-            <hr />
-            {item.files.map((file) => (
-              <div className={ui.listItem} key={file.id}>
-                {file.purpose !== "REQUEST_RESULT" || resultAvailable ? (
-                  <a className={ui.row} href={`/api/files/${file.id}`}>
-                    <FileText size={19} />
-                    {file.originalName}
-                    <small className={ui.muted}>PDF</small>
-                  </a>
-                ) : (
-                  <p className={ui.muted}>
-                    Срок доступности результата истёк. Обратитесь в учебный
-                    офис.
-                  </p>
-                )}
+            <div className={s.resultActions}>
+              {item.files.length > 0 && (
+                <ul className={s.files} aria-label="Файлы обращения">
+                  {item.files.map((file) => (
+                    <li className={s.file} key={file.id}>
+                      {file.purpose !== "REQUEST_RESULT" || resultAvailable ? (
+                        <a
+                          className={s.fileLink}
+                          href={`/api/files/${file.id}`}
+                        >
+                          <FileText size={19} aria-hidden />
+                          <span>{file.originalName}</span>
+                          <small className={ui.muted}>PDF</small>
+                        </a>
+                      ) : (
+                        <p className={ui.muted}>
+                          Срок доступности результата истёк. Обратитесь в
+                          учебный офис.
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className={s.actions}>
+                {item.status === "READY" &&
+                  !item.files.some((f) => f.purpose === "REQUEST_RESULT") && (
+                    <p className={ui.alert}>
+                      Результат не прикреплён. Уточните способ получения в
+                      учебном офисе.
+                    </p>
+                  )}
+                <RequestActions
+                  id={id}
+                  slug={item.serviceSlug}
+                  status={item.status}
+                  version={item.version}
+                  cancellable={Boolean(
+                    snapshot?.cancellable ?? item.service.cancellable,
+                  )}
+                />
               </div>
-            ))}
-            {item.status === "READY" &&
-              !item.files.some((f) => f.purpose === "REQUEST_RESULT") && (
-                <p className={ui.alert}>
-                  Результат не прикреплён. Уточните способ получения в учебном
-                  офисе.
-                </p>
-              )}
-            <RequestActions
-              id={id}
-              slug={item.serviceSlug}
-              status={item.status}
-              version={item.version}
-              cancellable={Boolean(
-                snapshot?.cancellable ?? item.service.cancellable,
-              )}
-            />
+            </div>
           </Card>
           <Card>
             <h2>Комментарии</h2>

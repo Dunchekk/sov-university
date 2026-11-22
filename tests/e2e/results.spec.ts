@@ -168,12 +168,20 @@ test("results offer data-driven filter values and order courses by name or semes
 
   await type.selectOption("Зачёт");
   await page.getByRole("button", { name: "Применить" }).click();
-  await expect(rows.first()).toContainText("Зачёт");
-  const metadata = await rows
-    .locator("span:first-child > span")
-    .allTextContents();
-  expect(metadata.length).toBeGreaterThan(0);
-  expect(metadata.every((label) => label.endsWith("Зачёт"))).toBe(true);
+  await expect(page).toHaveURL(
+    (url) => url.searchParams.get("type") === "Зачёт",
+  );
+  await expect
+    .poll(async () => {
+      const metadata = await rows
+        .locator("span:first-child > span")
+        .allTextContents();
+      return (
+        metadata.length > 0 &&
+        metadata.every((label) => label.endsWith("Зачёт"))
+      );
+    })
+    .toBe(true);
   await page.goto("/studies/results?course=course-1");
   await expect(
     results.getByRole("heading", { name: "Работы и оценки" }),

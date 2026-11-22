@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { ReactNode, ButtonHTMLAttributes } from "react";
 import { ArrowUpRight, Inbox } from "lucide-react";
+import { BreadcrumbTitle } from "./shell/BreadcrumbTitle";
 import s from "./ui.module.css";
 export { default as ui } from "./ui.module.css";
 export function Button({
@@ -54,13 +55,22 @@ export function PageTitle({
   title,
   description,
   action,
+  breadcrumb,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
+  breadcrumb?: { path: string; label?: string; parentHref?: string };
 }) {
   return (
     <div className={s.pageTitle}>
+      {breadcrumb && (
+        <BreadcrumbTitle
+          path={breadcrumb.path}
+          title={breadcrumb.label ?? title}
+          parentHref={breadcrumb.parentHref}
+        />
+      )}
       <div>
         <h1>{title}</h1>
         {description && <p>{description}</p>}
@@ -123,10 +133,25 @@ export function SectionTitle({
     </div>
   );
 }
-export function Avatar({ name, src }: { name: string; src?: string | null }) {
+export function Avatar({
+  name,
+  src,
+  unoptimized,
+}: {
+  name: string;
+  src?: string | null;
+  unoptimized?: boolean;
+}) {
   if (src)
     return (
-      <Image className={s.avatar} src={src} width={40} height={40} alt="" />
+      <Image
+        className={s.avatar}
+        src={src}
+        width={40}
+        height={40}
+        alt=""
+        unoptimized={unoptimized}
+      />
     );
   return (
     <span className={s.avatar} aria-hidden>

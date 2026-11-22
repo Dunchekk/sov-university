@@ -5,15 +5,14 @@
   gap: var(--space-2);
   min-height: var(--control-height);
   padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border-subtle);
+  border: 0;
   border-radius: var(--radius-control);
-  background: var(--bg-surface);
+  background: var(--bg-subtle);
   color: var(--text-primary);
   font-weight: var(--weight-medium);
   font-size: var(--text-sm);
   transition:
     background-color var(--motion),
-    border-color var(--motion),
     color var(--motion),
     opacity var(--motion),
     transform var(--motion) var(--ease-out);
@@ -29,7 +28,6 @@
 .primary {
   background: var(--primary-bg);
   color: var(--primary-fg);
-  border-color: var(--primary-bg);
 }
 .primary:hover:not(:disabled) {
   opacity: 0.85;
@@ -37,8 +35,7 @@
   color: var(--primary-fg);
 }
 .danger:hover:not(:disabled) {
-  background: var(--danger-soft);
-  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger-soft) 88%, var(--danger));
   color: var(--danger);
 }
 .danger {
@@ -382,6 +379,12 @@
 }
 .dialogBody > .between h2 {
   padding-block: var(--space-2);
+}
+.dialogHeading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
 }
 .details {
   padding: var(--space-4);

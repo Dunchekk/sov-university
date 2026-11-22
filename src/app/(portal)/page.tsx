@@ -22,6 +22,7 @@ import { statusLabel } from "@/shared/config/statuses";
 import s from "@/modules/dashboard/dashboard.module.css";
 export default async function Home() {
   const student = await pageStudent();
+  const isBudgetStudent = student.funding === "Бюджет";
   const today = dateKey();
   const now = new Date();
   const [events, deadlines, requests, payment] = await Promise.all([
@@ -39,11 +40,34 @@ export default async function Home() {
       orderBy: { updatedAt: "desc" },
       take: 3,
     }),
-    db.payment.findFirst({
-      where: { studentId: student.id, status: "EXPECTED" },
-      orderBy: { date: "asc" },
-    }),
+    isBudgetStudent
+      ? db.payment.findFirst({
+          where: { studentId: student.id, status: "EXPECTED" },
+          orderBy: { date: "asc" },
+        })
+      : null,
   ]);
+  const nextWeek = new Date(now.getTime() + 7 * 86400000).toISOString();
+  const nextClassEvents = events.filter(
+    (event) =>
+      event.type === "LESSON" && event.startsAt && event.startsAt < nextWeek,
+  );
+  const lecturerIds = [
+    ...new Set(
+      nextClassEvents.flatMap(({ lecturerId }) =>
+        lecturerId ? [lecturerId] : [],
+      ),
+    ),
+  ];
+  const lecturerProfiles = lecturerIds.length
+    ? await db.lecturerProfile.findMany({
+        where: { personId: { in: lecturerIds } },
+        select: { personId: true, avatar: true },
+      })
+    : [];
+  const lecturerAvatars = Object.fromEntries(
+    lecturerProfiles.map(({ personId, avatar }) => [personId, avatar]),
+  );
   const change = events.find((e) => e.changes?.length);
   return (
     <div className={s.dashboard}>
@@ -62,55 +86,53 @@ export default async function Home() {
           <Card className={s.top}>
             <HomeCalendar events={events} date={today} />
             <NextClass
-              events={events.filter(
-                (e) =>
-                  e.startsAt &&
-                  e.startsAt <
-                    new Date(now.getTime() + 7 * 86400000).toISOString(),
-              )}
+              events={nextClassEvents}
+              lecturerAvatars={lecturerAvatars}
               now={now.toISOString()}
             />
           </Card>
           <DeadlinesCard deadlines={deadlines} now={now} />
         </div>
         <div className={s.attentionRow}>
-          <Card>
-            <SectionTitle
-              title="Мои обращения"
-              href="/services?tab=requests"
-              label="Вся история"
-            />
-            {requests.map((r) => (
-              <Link
-                key={r.id}
-                href={`/requests/${r.id}`}
-                className={`${ui.between} ${ui.listLink}`}
-              >
-                <div>
-                  <h3>{r.service.title}</h3>
-                  <small className={ui.muted}>
-                    № {String(r.number).padStart(5, "0")} ·{" "}
-                    {r.status === "NEEDS_INFO"
-                      ? "Нужно ответить на уточнение"
-                      : r.status === "READY"
-                        ? "Документ доступен для скачивания"
-                        : "Ожидайте рассмотрения"}
-                  </small>
-                </div>
-                <Badge
-                  tone={
-                    r.status === "NEEDS_INFO"
-                      ? "warning"
-                      : r.status === "READY"
-                        ? "success"
-                        : "default"
-                  }
+          <div className={ui.stack}>
+            <Card>
+              <SectionTitle
+                title="Мои обращения"
+                href="/services?tab=requests"
+                label="Вся история"
+              />
+              {requests.map((r) => (
+                <Link
+                  key={r.id}
+                  href={`/requests/${r.id}`}
+                  className={`${ui.between} ${ui.listLink}`}
                 >
-                  {statusLabel(r.status)}
-                </Badge>
-              </Link>
-            ))}
-          </Card>
+                  <div>
+                    <h3>{r.service.title}</h3>
+                    <small className={ui.muted}>
+                      № {String(r.number).padStart(5, "0")} ·{" "}
+                      {r.status === "NEEDS_INFO"
+                        ? "Нужно ответить на уточнение"
+                        : r.status === "READY"
+                          ? "Документ доступен для скачивания"
+                          : "Ожидайте рассмотрения"}
+                    </small>
+                  </div>
+                  <Badge
+                    tone={
+                      r.status === "NEEDS_INFO"
+                        ? "warning"
+                        : r.status === "READY"
+                          ? "success"
+                          : "default"
+                    }
+                  >
+                    {statusLabel(r.status)}
+                  </Badge>
+                </Link>
+              ))}
+            </Card>
+          </div>
           <div className={ui.stack}>
             <section
               className={`${ui.card} ${s.attentionSection}`}
@@ -153,19 +175,24 @@ export default async function Home() {
                 </div>
               </div>
             </section>
-            {payment && (
-              <Link href="/finance" className={`${ui.card} ${s.finance}`}>
+            {isBudgetStudent && (
+              <Link
+                href={payment ? "/finance" : "/finance?tab=scholarships"}
+                className={`${ui.card} ${s.finance}`}
+              >
                 <div className={ui.row}>
                   <Wallet size={18} aria-hidden />
                   <span>
-                    Следующая стипендия
+                    {payment ? "Следующая стипендия" : "Стипендия"}
                     <br />
                     <small className={ui.muted}>
-                      {formatDate(payment.date)} · ожидается
+                      {payment
+                        ? `${formatDate(payment.date)} · ожидается`
+                        : "Нет назначений"}
                     </small>
                   </span>
                 </div>
-                <strong>{money(payment.amountKopecks)}</strong>
+                {payment && <strong>{money(payment.amountKopecks)}</strong>}
               </Link>
             )}
           </div>

@@ -429,14 +429,11 @@
   overflow: hidden;
   line-height: 1.4;
   display: block;
-  transition:
-    filter var(--motion),
-    box-shadow var(--motion);
+  transition: filter var(--motion);
 }
 .event:hover {
   color: var(--event-fg);
   filter: brightness(0.96);
-  box-shadow: inset 0 0 0 1px var(--event-fg);
 }
 :is(.event, .filterLabel, .eventBadge)[data-type="DEADLINE"] {
   --event-fg: var(--danger);
@@ -516,8 +513,7 @@
   text-decoration: line-through;
 }
 .comparison {
-  border-style: dashed;
-  border-width: 1px 1px 1px 3px;
+  border-left-style: dashed;
 }
 .more {
   background: none;
@@ -785,20 +781,30 @@
 .nextLecturer {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-3);
+  gap: var(--space-2);
   border-top: 1px solid
     color-mix(in srgb, var(--border-control) 40%, var(--border-subtle));
   padding-top: var(--space-3);
 }
 .nextLecturerAvatar {
-  flex: 0 0 28px;
-  height: 28px;
+  display: grid;
+  flex: none;
+  width: 32px;
+  height: 32px;
   margin-top: 3px;
+  font-size: var(--text-xs);
+  overflow: hidden;
   border-radius: 50%;
-  background: var(--bg-surface);
+}
+.nextLecturerAvatar > :is(img, span) {
+  width: 100%;
+  height: 100%;
 }
 .nextLecturerName {
   line-height: 1.3;
+}
+.nextLecturerName a:not(:hover, :focus-visible) {
+  color: inherit;
 }
 .nextTitle {
   font-size: 18px;
