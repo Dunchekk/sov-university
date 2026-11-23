@@ -252,7 +252,9 @@ test("conditional form, draft refresh and actual submission in browser", async (
   await page
     .getByRole("button", { name: "Сохранить черновик", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText("Черновик сохранён");
+  await expect(
+    page.getByRole("status").filter({ hasText: "Черновик сохранён" }),
+  ).toBeVisible();
   await page.reload();
   await expect(page.getByLabel("Количество экземпляров")).toHaveValue("2");
   await page.getByRole("button", { name: "Проверить и отправить" }).click();

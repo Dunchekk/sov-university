@@ -17,6 +17,21 @@ test.afterEach(async ({}, info) => {
   if (info.title.startsWith("auth:")) await clearTestRateLimits();
 });
 
+test("login renders a POST form without browser scripts", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await page.goto(`${origin}/login`);
+    const form = page.getByRole("form", { name: "Личный кабинет студента" });
+    await expect(form).toHaveAttribute("method", "post");
+    await expect(form.getByLabel("Пароль")).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
 test("auth: neutral invalid password, registration closed, throttling, origin and logout revocation", async ({
   playwright,
 }) => {

@@ -127,7 +127,10 @@ export async function parseImport(
   }
 }
 
-export function exportICS(events: CalendarEvent[]) {
+export function exportICS(
+  events: CalendarEvent[],
+  { redactCancelledPersonal = false } = {},
+) {
   const calendar = new ICAL.Component("vcalendar");
   calendar.addPropertyWithValue("version", "2.0");
   calendar.addPropertyWithValue("prodid", "-//Ryadom//Student Portal 1.0//RU");
@@ -137,14 +140,18 @@ export function exportICS(events: CalendarEvent[]) {
   for (const event of events) {
     const item = new ICAL.Component("vevent");
     item.addPropertyWithValue("uid", event.uid);
-    item.addPropertyWithValue("summary", event.title);
-    item.addPropertyWithValue(
-      "description",
-      event.exportDescription ?? event.description,
-    );
-    item.addPropertyWithValue("location", event.location);
-    if (event.url?.startsWith("https://"))
-      item.addPropertyWithValue("url", event.url);
+    const redact =
+      redactCancelledPersonal && event.type === "PERSONAL" && event.cancelled;
+    if (!redact) {
+      item.addPropertyWithValue("summary", event.title);
+      item.addPropertyWithValue(
+        "description",
+        event.exportDescription ?? event.description,
+      );
+      item.addPropertyWithValue("location", event.location);
+      if (event.url?.startsWith("https://"))
+        item.addPropertyWithValue("url", event.url);
+    }
     item.addPropertyWithValue(
       "dtstart",
       event.startDate

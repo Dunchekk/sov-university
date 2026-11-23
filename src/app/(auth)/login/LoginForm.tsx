@@ -13,6 +13,7 @@ export function LoginForm() {
     <form
       className={`${ui.card} ${s.form}`}
       aria-labelledby={titleId}
+      method="post"
       onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);

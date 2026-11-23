@@ -543,7 +543,9 @@ test("browser imports a file, confirms its preview and navigates calendar views"
   await page.getByRole("button", { name: "Посмотреть перед импортом" }).click();
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Подтвердить импорт" }).click();
-  await expect(page.getByRole("status")).toContainText("Импорт завершён");
+  await expect(
+    connections.getByRole("status").filter({ hasText: "Импорт завершён" }),
+  ).toBeVisible();
   const sources = (await (await student.get("/api/calendar/feeds")).json())
     .sources;
   const source = sources.find((s: { name: string }) => s.name === name);
@@ -560,7 +562,7 @@ test("browser imports a file, confirms its preview and navigates calendar views"
         .filter({ hasText: name })
         .first();
       if (view === "month") {
-        await expect(eventCard).toHaveText(name);
+        await expect(eventCard).toHaveAccessibleName(name);
         expect((await eventCard.boundingBox())!.height).toBeLessThanOrEqual(24);
         await eventCard.click();
         await expect(

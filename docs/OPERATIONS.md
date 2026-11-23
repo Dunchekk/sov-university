@@ -15,15 +15,19 @@ Caddy автоматически получает TLS-сертификат, пр
 
 ## Резервное копирование
 
-БД и приватные файлы — одна согласованная копия. Скрипт временно останавливает приложение, делает pg_dump и tar файлов, затем возвращает прежнее состояние app. БД остаётся работающей. На диске копия доступна только владельцу.
+Для создания копии нужны Python 3, `age` и файл публичных ключей получателей. Создайте ключ восстановления `age-keygen` вне сервера и храните его отдельно от копий. На сервер передайте только файл с публичным ключом, выведенным `age-keygen -y`.
+
+Скрипт берёт дамп и список файлов из одного снимка PostgreSQL. Он проверяет размер и SHA-256 каждого файла и сохраняет только зашифрованные `database.dump.age` и `files.tar.age`. Сайт продолжает работать. Если файл удалён или изменён во время копирования, скрипт завершится ошибкой до публикации копии. Повторите запуск с новым снимком.
 
 ```sh
+export RYADOM_BACKUP_RECIPIENTS=/path/to/recipients.txt
 DOCKER_CONTEXT=colima-hackathon bash scripts/backup.sh
-# Для отдельного стенда:
-COMPOSE_PROJECT_NAME=ryadom-smoke RYADOM_ENV_FILE=.env.smoke DOCKER_CONTEXT=colima-hackathon bash scripts/backup.sh
+
+# Для standalone на VPS. Настройте libpq service с доступом на чтение БД.
+PGSERVICE=ryadom-backup STORAGE_DIR=/path/to/storage bash scripts/backup.sh --standalone /path/to/new/backup
 ```
 
-Хранить копии вне сервера в зашифрованном хранилище. Отдельно сохранить `.env` и, если нужны прежние сертификаты, Caddy volumes. Пароли/сессии/хеши токенов находятся в DB dump: не коммитить его. Файл demo-доступов не является резервной копией БД.
+В standalone используйте `psql`, `pg_dump` и `tar` на VPS. Задайте параметры подключения через `PGSERVICE` или `PGDATABASE`, `PGHOST`, `PGUSER` и файл `PGPASSFILE` с правами `0600`. Путь назначения должен быть новым каталогом. Настройте регулярный запуск и выгрузку обеих частей копии в закрытое хранилище вне VPS. Проверяйте последнее успешное копирование и уведомляйте об ошибках. Секреты окружения храните отдельной зашифрованной копией.
 
 ## Восстановление
 
@@ -31,10 +35,13 @@ COMPOSE_PROJECT_NAME=ryadom-smoke RYADOM_ENV_FILE=.env.smoke DOCKER_CONTEXT=coli
 
 ```sh
 export COMPOSE_PROJECT_NAME=ryadom-restore
+set -o pipefail
 docker compose --env-file .env.restore up -d db
 # Дождаться healthy, не запускать миграции/seed в пустую БД перед restore:
-docker compose --env-file .env.restore exec -T db pg_restore -U ryadom -d ryadom --no-owner --no-acl < BACKUP/database.dump
-docker compose --env-file .env.restore run --rm -T --no-deps --entrypoint tar app -C /app/storage -xf - < BACKUP/files.tar
+age -d -i /path/to/recovery-key BACKUP/database.dump.age |
+  docker compose --env-file .env.restore exec -T db pg_restore -U ryadom -d ryadom --exit-on-error --no-owner --no-acl
+age -d -i /path/to/recovery-key BACKUP/files.tar.age |
+  docker compose --env-file .env.restore run --rm -T --no-deps --entrypoint tar app -C /app/storage -xf -
 docker compose --env-file .env.restore up -d app
 ```
 

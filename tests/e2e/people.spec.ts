@@ -92,7 +92,7 @@ test("group search and reset keep the group tab, portraits and curator link", as
   await reset.click();
   await expect(search).toHaveValue("");
   await search.fill("Арина");
-  await page.getByRole("button", { name: "Найти" }).click();
+  await page.getByRole("button", { name: "Найти", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Арина Фомина" }),
   ).toBeVisible();

@@ -334,6 +334,7 @@ export async function readFeed(request: Request, token: string) {
       },
       { includeDeleted: true },
     ),
+    { redactCancelledPersonal: true },
   );
   const etag = `"${createHash("sha256").update(body).digest("hex")}"`;
   // Authentication and revocation must precede the conditional response.

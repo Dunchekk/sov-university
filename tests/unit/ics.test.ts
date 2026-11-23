@@ -124,7 +124,7 @@ describe("ICS standard library boundary", () => {
       ),
     ).rejects.toMatchObject({ status: 422 });
   }, 12000);
-  it("exports UTF-8 folded CRLF and stable UID/sequence/cancellation with an independent parser", () => {
+  it("preserves calendar cancellation metadata and omits cancelled personal event details", () => {
     const data: CalendarEvent = {
       id: "e",
       uid: "stable@ryadom.local",
@@ -132,6 +132,7 @@ describe("ICS standard library boundary", () => {
       title: "Кириллица, точка; слеш\\ и перенос\n".repeat(8),
       description: "<script>literal</script>",
       location: "Аудитория",
+      url: "https://example.org/appointment",
       startsAt: null,
       endsAt: null,
       startDate: "2026-03-29",
@@ -144,21 +145,43 @@ describe("ICS standard library boundary", () => {
       updatedAt: "2026-03-20T10:00:00Z",
       editable: true,
     };
-    const exported = exportICS([data]);
+    const exported = exportICS(
+      [
+        data,
+        { ...data, uid: "active@ryadom.local", cancelled: false },
+        { ...data, uid: "lesson@ryadom.local", type: "LESSON" },
+      ],
+      { redactCancelledPersonal: true },
+    );
     expect(exported.replaceAll("\r\n", "")).not.toContain("\n");
     expect(
       exported.split("\r\n").every((line) => Buffer.byteLength(line) <= 76),
     ).toBe(true);
-    const parsed = nodeIcal.sync.parseICS(exported)[
-      "stable@ryadom.local"
-    ] as VEvent;
+    const events = nodeIcal.sync.parseICS(exported);
+    const parsed = events["stable@ryadom.local"] as VEvent;
     expect(parsed.type).toBe("VEVENT");
     if (parsed.type !== "VEVENT") throw new Error("Expected event");
-    expect(parsed.summary).toBe(data.title);
+    const cancelled = exported.split("BEGIN:VEVENT\r\n")[1];
+    expect(cancelled).not.toMatch(/^(SUMMARY|DESCRIPTION|LOCATION|URL):/m);
     expect(parsed.status).toBe("CANCELLED");
     expect(parsed.sequence).toBe(2);
     expect(parsed.start.dateOnly).toBe(true);
     expect(parsed.start.getDate()).toBe(29);
     expect(parsed.end!.getDate()).toBe(31);
+    expect(events["active@ryadom.local"]).toMatchObject({
+      summary: data.title,
+      description: data.description,
+      location: data.location,
+      url: data.url,
+      status: "CONFIRMED",
+    });
+    expect(events["lesson@ryadom.local"]).toMatchObject({
+      summary: data.title,
+      status: "CANCELLED",
+    });
+    expect(nodeIcal.sync.parseICS(exportICS([data]))[data.uid]).toMatchObject({
+      summary: data.title,
+      status: "CANCELLED",
+    });
   });
 });
